@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14213D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hall Pass">
+<meta name="robots" content="noindex,nofollow">
+<meta name="description" content="Hall Pass: a bathroom pass tracker for schools">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Hall Pass</title>
+<script>
+/* ===== HALL PASS SETTINGS: the only part you need to edit =====
+   Paste your two Supabase values between the quotes, then save.
+   The key is meant to be public. Your data is protected by the school code. */
+window.HALLPASS_CONFIG = {
+  supabaseUrl: "",   /* example: "https://abcdefghijkl.supabase.co" */
+  supabaseKey: ""    /* starts with sb_publishable_ (or the older "anon" key) */
+};
+/* ===== END OF SETTINGS ===== */
+</script>
+<style>
+:root{
+  --bg:#EDF1F4; --surface:#FFFFFF; --ink:#14213D; --muted:#5B6678; --line:#D2DAE3;
+  --in:#0F766E; --in-soft:#D9F0EC; --over:#C2410C; --over-ink:#FFFFFF; --tag:#FFC857; --tag-ink:#3B2A00;
+  --btn:#14213D; --btn-ink:#FFFFFF;
+  --amber-bg:#FFE8B8; --amber-ink:#7A5200; --blue-bg:#DCE9FB; --blue-ink:#1D4ED8; --red-bg:#F6C9C9; --red-ink:#991B1B;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0E1524; --surface:#18233A; --ink:#EAF0F8; --muted:#9AA7BC; --line:#2B3954;
+    --in:#5EC8BB; --in-soft:#143A3B; --over:#FF9A6B; --over-ink:#2B0F02;
+    --btn:#EAF0F8; --btn-ink:#0E1524;
+    --amber-bg:#4A3A12; --amber-ink:#FFD98A; --blue-bg:#1B2F55; --blue-ink:#9DBDFF; --red-bg:#4A1F1F; --red-ink:#FFB4B4;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:ui-rounded,"SF Pro Rounded","Avenir Next","Trebuchet MS",system-ui,sans-serif;line-height:1.4;font-size:16px}
+#app{max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 16px 110px}
+h1,h2,h3,p{margin:0}
+.head{margin-bottom:18px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.title{font-size:28px;font-weight:800;letter-spacing:-.5px;line-height:1.15;overflow-wrap:anywhere}
+.sub{color:var(--muted);font-size:15px;margin-top:4px}
+.section{margin-top:24px}
+.section>h2{font-size:17px;font-weight:700;margin-bottom:10px}
+.note{color:var(--muted);font-size:14px}
+.warn{color:var(--over);font-weight:700}
+.empty{background:var(--surface);border:1.5px dashed var(--line);border-radius:14px;padding:18px;color:var(--muted);text-align:center}
+
+.btn{appearance:none;border:0;background:var(--btn);color:var(--btn-ink);font:inherit;font-weight:700;border-radius:12px;padding:13px 18px;min-height:48px;cursor:pointer;width:100%}
+.btn:active{transform:scale(.98)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.small{width:auto;min-height:40px;padding:8px 14px;font-size:14px}
+.btn.danger{background:var(--over);color:var(--over-ink)}
+.btn.fixed-dark{background:#14213D;color:#fff}
+.btn.green{background:#0F766E;color:#fff}
+.stack>*+*{margin-top:10px}
+.linkbtn{appearance:none;background:none;border:0;font:inherit;color:var(--muted);text-decoration:underline;padding:10px 0;cursor:pointer}
+.linkbtn.inl{padding:0;color:var(--in);font-weight:700}
+
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;width:100%;min-height:48px}
+textarea{min-height:110px;resize:vertical}
+input.search{margin-bottom:12px}
+label{display:block;font-weight:600;font-size:14px;margin:14px 0 6px}
+:focus-visible{outline:3px solid var(--in);outline-offset:2px}
+
+.welcome{padding-top:8vh}
+.welcome .title{font-size:40px}
+.welcome p{color:var(--muted);margin:10px 0 28px;font-size:17px}
+
+.chips{display:flex;gap:8px;overflow-x:auto;margin-top:14px;padding-bottom:2px}
+.chip{appearance:none;font:inherit;font-weight:700;font-size:15px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 16px;min-height:42px;white-space:nowrap;cursor:pointer}
+.chip.on{background:var(--btn);color:var(--btn-ink);border-color:var(--btn)}
+.chip .dot{margin-left:8px;background:var(--over);color:var(--over-ink);border-radius:999px;font-size:12px;padding:2px 7px}
+.chips.wrap{flex-wrap:wrap;overflow:visible;margin-top:0}
+
+.pass{position:relative;background:var(--tag);color:var(--tag-ink);border-radius:14px;padding:14px 14px 14px 46px;margin-bottom:10px}
+.pass::before{content:"";position:absolute;left:15px;top:20px;width:15px;height:15px;border-radius:50%;background:var(--bg);box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
+.pass .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.pass .who{font-weight:800;font-size:19px;line-height:1.2}
+.pass .clock{font-variant-numeric:tabular-nums;font-size:32px;font-weight:800;letter-spacing:-1px}
+.pass .overnote{display:none;font-size:13px;font-weight:700}
+.pass.over{background:#C2410C;color:#fff}
+.pass.over .overnote{display:block}
+.pass.over .btn{background:#fff;color:#7A2A07}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stu{appearance:none;font:inherit;font-weight:600;font-size:16px;text-align:left;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px;min-height:54px;cursor:pointer;overflow-wrap:anywhere}
+.stu:active{background:var(--in-soft);border-color:var(--in)}
+.stu[disabled]{opacity:.6;cursor:default}
+.stu.blocked{border-style:dashed}
+.stu small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.stu small.warn{font-weight:700;color:var(--over)}
+.stu.full{width:100%;margin-bottom:8px}
+
+.card{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.card.hot{border-color:var(--over);border-width:2px}
+.card .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card .name{font-weight:700;font-size:17px;overflow-wrap:anywhere}
+.tap{cursor:pointer}
+.tap:active{background:var(--in-soft)}
+.chev{color:var(--muted);font-size:22px;line-height:1;margin-left:8px;vertical-align:-2px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--in-soft);color:var(--in);white-space:nowrap;vertical-align:1px}
+.pill.out{background:var(--over);color:var(--over-ink)}
+.pill.muted{background:var(--line);color:var(--ink)}
+.pill.amber{background:var(--amber-bg);color:var(--amber-ink)}
+.mini{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
+.mini:first-of-type{margin-top:10px}
+.mini .t{font-variant-numeric:tabular-nums;font-weight:800}
+.mini.over .t{color:var(--over)}
+
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{border-radius:14px;padding:12px 10px;text-align:center}
+.kpi b{display:block;font-size:28px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi span{font-size:12px;font-weight:600}
+.kpi.teal{background:var(--in-soft);color:var(--in)}
+.kpi.blue{background:var(--blue-bg);color:var(--blue-ink)}
+.kpi.orange{background:var(--amber-bg);color:var(--amber-ink)}
+.kpi.red{background:var(--red-bg);color:var(--red-ink)}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px}
+.stat b{display:block;font-size:24px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:4px}
+.seg.two{grid-template-columns:1fr 1fr}
+.seg button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:700;font-size:14px;padding:10px 4px;border-radius:9px;cursor:pointer}
+.seg button.on{background:var(--btn);color:var(--btn-ink)}
+.seg.small button{padding:6px 4px;font-size:13px}
+
+.srow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.srow .sname{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.srow .seg{width:132px;flex:none}
+
+.bar{display:grid;grid-template-columns:minmax(80px,34%) 1fr 30px;gap:10px;align-items:center;margin-bottom:10px;font-size:14px}
+.bar .track{height:12px;background:var(--line);border-radius:6px;overflow:hidden;display:flex}
+.bar .track i{display:block;height:100%}
+.bar .track i.t{background:var(--in)}
+.bar .track i.s{background:var(--over)}
+.bar b{text-align:right;font-variant-numeric:tabular-nums}
+.bar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.chart{display:flex;gap:3px;height:120px;align-items:stretch;margin-top:6px}
+.chart .col{flex:1;position:relative;min-width:0}
+.chart .stack{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;border-radius:4px 4px 0 0;overflow:hidden}
+.chart .stack i{display:block}
+.chart .stack i.t{background:var(--in)}
+.chart .stack i.s{background:var(--over)}
+.chart .v{position:absolute;left:0;right:0;text-align:center;font-size:10px;font-weight:700;color:var(--muted)}
+.xlabels{display:flex;gap:3px;margin-top:4px}
+.xlabels span{flex:1;text-align:center;font-size:10px;color:var(--muted);min-width:0;overflow:hidden}
+.legend{display:flex;gap:14px;margin-top:8px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend i.t{background:var(--in)}
+.legend i.s{background:var(--over)}
+
+.meter{white-space:nowrap}
+.meter i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:3px;border:2px solid var(--over);vertical-align:-1px}
+.meter i.on{background:var(--over)}
+
+.log{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+.log .l{min-width:0}
+.log .who{font-weight:700;overflow-wrap:anywhere}
+.log .meta{color:var(--muted);font-size:13px}
+.log .r{text-align:right;white-space:nowrap}
+.log.tap:active{background:var(--in-soft)}
+.day{font-weight:700;margin:18px 0 2px;font-size:15px}
+.inline{display:flex;gap:8px;margin-top:10px;align-items:center}
+.inline input{flex:1;min-width:0}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;background:var(--surface);border-top:1.5px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+.tabs button{flex:1;max-width:130px;appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-weight:700;font-size:14px;padding:16px 2px 14px;cursor:pointer;border-top:4px solid transparent;margin-top:-1.5px}
+.tabs button.on{color:var(--ink);border-top-color:var(--in)}
+.tabs .badge{display:inline-block;margin-left:4px;background:var(--over);color:var(--over-ink);border-radius:999px;font-size:11px;padding:1px 6px;vertical-align:1px}
+
+.scrim{position:fixed;inset:0;background:rgba(10,16,30,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);color:var(--ink);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:22px 16px calc(20px + env(safe-area-inset-bottom))}
+.sheet h2{font-size:20px;margin-bottom:8px}
+.sheet p{margin-bottom:8px}
+
+.demo{background:var(--amber-bg);color:var(--amber-ink);font-size:12px;font-weight:700;text-align:center;padding:6px 10px}
+#toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--btn);color:var(--btn-ink);padding:12px 18px;border-radius:12px;font-weight:600;font-size:15px;max-width:min(92vw,440px);text-align:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:30}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion: reduce){#toast{transition:none}.btn:active{transform:none}}
+</style>
+</head>
+<body>
+<div class="demo" id="demo" hidden>Demo mode: data stays on this phone only. Finish the setup in config.js to share it between phones.</div>
+<div id="app"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- helpers ---------- */
+const $app = document.getElementById('app');
+const $toast = document.getElementById('toast');
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const val = id => (document.getElementById(id) || {value:''}).value.trim();
+const DAY = 864e5;
+const startOfToday = () => { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); };
+const fmt = ms => { const s = Math.floor(Math.max(0, ms) / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const durText = ms => { const s = Math.round(Math.max(0, ms) / 1000); const m = Math.floor(s / 60); return m ? `${m}m ${s % 60}s` : `${s}s`; };
+const nm = n => String(Math.round(n * 100) / 100);
+const tm = ts => new Date(ts).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+const dayLabel = ts => new Date(ts).toLocaleDateString([], {weekday:'long', month:'short', day:'numeric'});
+const shortDate = ts => new Date(ts).toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const norm = s => String(s == null ? '' : s).toLowerCase();
+const match = (q, ...f) => !q || f.some(x => norm(x).includes(norm(q).trim()));
+let toastTimer;
+function toast(msg, long){ $toast.textContent = msg; $toast.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $toast.classList.remove('show'), long ? 6000 : 2800); }
+
+/* ---------- storage ----------
+   Shared data (classes, teachers, logs, settings) lives in your Supabase database (see config.js).
+   Anything private to one phone (who is logged in, the school code) stays in that phone's browser.
+   If config.js is not filled in yet, the app runs in demo mode and keeps everything on this device. */
+const CFG = window.HALLPASS_CONFIG || {};
+const CLOUD = !!(CFG.supabaseUrl && CFG.supabaseKey);
+const BASE = CLOUD ? String(CFG.supabaseUrl).replace(/\/+$/, '') + '/rest/v1/kv' : '';
+const mem = {};
+const ls = {
+  get(k){ try { const v = localStorage.getItem(k); return v == null ? null : v; } catch (e) { return mem[k] == null ? null : mem[k]; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } },
+  del(k){ try { localStorage.removeItem(k); } catch (e) { delete mem[k]; } }
+};
+const schoolCode = () => ls.get('hp:code') || '';
+function cloudHeaders(extra){
+  const key = CFG.supabaseKey;
+  const h = Object.assign({apikey:key, 'Content-Type':'application/json', 'x-school-code':schoolCode()}, extra || {});
+  if (key.startsWith('eyJ')) h.Authorization = 'Bearer ' + key;   /* older anon keys are JWTs; new sb_publishable keys go in apikey only */
+  return h;
+}
+async function cloud(path, opts){
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+  let res;
+  try { res = await fetch(BASE + path, Object.assign({signal:ctl.signal}, opts, {headers:cloudHeaders(opts && opts.headers)})); }
+  catch (e) { throw new Error('net'); }
+  finally { clearTimeout(timer); }
+  if (res.status === 401 || res.status === 403) throw new Error('auth');
+  if (!res.ok) throw new Error('net');
+  return res;
+}
+const UPSERT = {method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'}};
+const store = {
+  async get(k, shared){
+    if (!shared || !CLOUD) { const v = ls.get((shared ? 's:' : 'p:') + k); return v == null ? null : JSON.parse(v); }
+    const r = await cloud('?select=value&key=eq.' + encodeURIComponent(k));
+    const a = await r.json();
+    return a.length ? a[0].value : null;
+  },
+  async getMany(keys, shared){
+    const out = {};
+    if (!keys.length) return out;
+    if (!shared || !CLOUD) { for (const k of keys) out[k] = await store.get(k, shared); return out; }
+    const filter = 'in.(' + keys.map(k => '"' + String(k).replace(/"/g, '') + '"').join(',') + ')';
+    const r = await cloud('?select=key,value&key=' + encodeURIComponent(filter));
+    (await r.json()).forEach(x => { out[x.key] = x.value; });
+    keys.forEach(k => { if (!(k in out)) out[k] = null; });
+    return out;
+  },
+  async set(k, v, shared){
+    if (!shared || !CLOUD) { ls.set((shared ? 's:' : 'p:') + k, JSON.stringify(v)); return true; }
+    await cloud('?on_conflict=key', Object.assign({}, UPSERT, {body:JSON.stringify({key:k, value:v, updated_at:new Date().toISOString()})}));
+    return true;
+  },
+  async del(k, shared){
+    if (!shared || !CLOUD) { ls.del((shared ? 's:' : 'p:') + k); return; }
+    await cloud('?key=eq.' + encodeURIComponent(k), {method:'DELETE'});
+  }
+};
+
+/* ---------- settings model ----------
+   Data keys: settings | limitsLog | classIndex | class:<id> | teacherIndex | teacher:<id> | log:<classId> */
+const DEF = {pin:null, maxMin:5, maxTrips:3, outMode:'total', maxOut:1, maxBoys:1, maxGirls:1, strikeLimit:3, resetDays:7, anchor:new Date(2026, 0, 5).getTime()};
+
+const LIMITS = [
+  ['maxMin',      'Longest allowed trip (minutes)'],
+  ['maxTrips',    'Trips allowed per student each day'],
+  ['outMode',     'Out-at-once rule'],
+  ['maxOut',      'Students out at once (any gender)'],
+  ['maxBoys',     'Boys out at once'],
+  ['maxGirls',    'Girls out at once'],
+  ['strikeLimit', 'Strikes that earn a warning'],
+  ['resetDays',   'Strikes and warnings reset every (days)']
+];
+const limitVal = (k, v) => k === 'outMode' ? (v === 'gender' ? 'Boys and girls counted separately' : 'Total students, any gender') : v;
+const snap = s => { const o = {}; LIMITS.forEach(([k]) => o[k] = s[k]); return o; };
+
+const FIELDS = {
+  maxMin:      {label:'Longest allowed trip',                presets:[2,3,4,5,6,7,8,10,15], fmt:n => `${nm(n)} minutes`, min:0.5, max:120, int:false, unit:'minutes'},
+  maxTrips:    {label:'Trips allowed per student each day',  presets:[1,2,3,4,5],           fmt:n => plural(n, 'trip'),   min:1, max:50, int:true, unit:'trips'},
+  maxOut:      {label:'Students out at once',                presets:[1,2,3,4],             fmt:n => plural(n, 'student'), min:1, max:50, int:true, unit:'students'},
+  maxBoys:     {label:'Boys out at once',                    presets:[1,2,3],               fmt:n => plural(n, 'boy'),     min:1, max:50, int:true, unit:'boys'},
+  maxGirls:    {label:'Girls out at once',                   presets:[1,2,3],               fmt:n => plural(n, 'girl'),    min:1, max:50, int:true, unit:'girls'},
+  strikeLimit: {label:'Strikes that earn a warning',         presets:[2,3,4,5],             fmt:n => plural(n, 'strike'),  min:1, max:50, int:true, unit:'strikes'},
+  resetDays:   {label:'Reset strikes and warnings',          presets:[1,7,14,30],           fmt:n => ({1:'Every day', 7:'Every week', 14:'Every 2 weeks', 30:'Every month'}[n] || `Every ${n} days`), min:1, max:365, int:true, unit:'days'}
+};
+
+/* ---------- state ---------- */
+const S = {
+  device:null, settings:Object.assign({}, DEF), limitsLog:[],
+  classes:[], teachers:[], me:null, cls:null, logs:{},
+  tab:'roster', unlocked:false, range:'7', pending:null, editClass:null, loginTeacher:null,
+  busy:false, confirm:null, customOpen:{}, addGender:'', draft:'', nav:[], q:{}, needCode:false
+};
+
+async function loadSettings(){ S.settings = Object.assign({}, DEF, (await store.get('settings', true)) || {}); }
+async function loadClasses(){
+  const idx = (await store.get('classIndex', true)) || [];
+  const m = await store.getMany(idx.map(id => 'class:' + id), true);
+  S.classes = idx.map(id => m['class:' + id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
+}
+async function loadTeachers(){
+  const idx = (await store.get('teacherIndex', true)) || [];
+  const m = await store.getMany(idx.map(id => 'teacher:' + id), true);
+  S.teachers = idx.map(id => m['teacher:' + id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
+}
+async function loadLog(id){ return (await store.get('log:' + id, true)) || []; }
+async function loadLogs(classes){
+  const m = await store.getMany(classes.map(c => 'log:' + c.id), true);
+  const logs = {};
+  classes.forEach(c => { logs[c.id] = m['log:' + c.id] || []; });
+  return logs;
+}
+async function refreshAll(){
+  await Promise.all([loadSettings(), loadClasses(), loadTeachers()]);
+  S.limitsLog = (await store.get('limitsLog', true)) || [];
+  S.logs = await loadLogs(S.classes);
+}
+const myClasses = () => S.me ? S.classes.filter(c => S.me.classIds.includes(c.id)) : [];
+async function refreshMine(){
+  await Promise.all([loadSettings(), loadClasses(), loadTeachers()]);
+  S.me = S.device && S.device.teacherId ? S.teachers.find(t => t.id === S.device.teacherId) || null : null;
+  if (!S.me) return;
+  const mine = myClasses();
+  S.logs = await loadLogs(mine);
+  S.cls = mine.find(c => S.cls && c.id === S.cls.id) || mine[0] || null;
+}
+const curLog = () => (S.cls && S.logs[S.cls.id]) || [];
+const rosterOf = c => ((c && c.roster) || []).map(x => typeof x === 'string' ? {name:x, gender:''} : x);
+const genderWord = g => g === 'B' ? 'boy' : g === 'G' ? 'girl' : '';
+const genderLabel = g => g === 'B' ? 'Boy' : g === 'G' ? 'Girl' : 'Not set';
+
+async function saveSetting(key, value){
+  await loadSettings();
+  const old = snap(S.settings);
+  if (S.settings[key] === value) return false;
+  S.settings[key] = value;
+  await store.set('settings', S.settings, true);
+  const lg = (await store.get('limitsLog', true)) || [];
+  lg.push({ts:Date.now(), key, old, nw:snap(S.settings)});
+  await store.set('limitsLog', lg, true);
+  S.limitsLog = lg;
+  return true;
+}
+
+/* ---------- rules: strikes and warnings ----------
+   A STRIKE is given when a student
+     - stays out longer than the allowed time (kind "time"), or
+     - is sent out after using all their trips for the day, using Allow anyway (kind "daily").
+   When strikes reach the strike limit the student gets a WARNING and their strikes start again at 0.
+   Each trip stores its strike events in r.st = [{k, n, sl, w}]. */
+const evs = r => r.st || (r.strike ? [{k:'time', n:r.sn, sl:r.sl, w:!!r.warnGiven}] : []);
+const KIND = {time:'too long', daily:'extra trip'};
+const KIND_LONG = {time:'Over the time limit', daily:'Over the daily trips'};
+
+function periodStart(){
+  const p = S.settings.resetDays * DAY, a = S.settings.anchor;
+  return a + Math.floor((Date.now() - a) / p) * p;
+}
+const nextReset = () => periodStart() + S.settings.resetDays * DAY;
+
+function infoMap(log){
+  const t0 = startOfToday(), p0 = periodStart(), m = {};
+  [...log].sort((a, b) => a.out - b.out).forEach(r => {
+    const o = m[r.student] || (m[r.student] = {today:0, strikes:0, warns:0, last:0});
+    if (r.out >= t0) o.today++;
+    if (r.out >= p0) evs(r).forEach(e => {
+      o.strikes++; o.last = Math.max(o.last, r.out);
+      if (e.w) { o.warns++; o.strikes = 0; }
+    });
+  });
+  return m;
+}
+function addStrike(cur, r, kind, s){
+  const base = (infoMap(cur)[r.student] || {strikes:0}).strikes;
+  const n = base + 1;
+  const ev = {k:kind, n, sl:s.strikeLimit, w:n >= s.strikeLimit};
+  r.st = (r.st || []).concat(ev);
+  return ev;
+}
+function outLimitText(log, g){
+  const s = S.settings, out = log.filter(r => !r.in);
+  if (s.outMode === 'gender') {
+    const lim = g === 'B' ? s.maxBoys : s.maxGirls;
+    const n = out.filter(r => r.g === g).length;
+    if (n >= lim) return lim === 1 ? `A ${genderWord(g)} is already out (limit 1).` : `${lim} ${genderWord(g)}s are already out (limit ${lim}).`;
+    return null;
+  }
+  return out.length >= s.maxOut ? (s.maxOut === 1 ? 'A student is already out (limit 1).' : `${s.maxOut} students are already out (limit ${s.maxOut}).`) : null;
+}
+function stats(rows){
+  const done = rows.filter(r => r.in), d = done.map(r => r.in - r.out);
+  return {
+    n: rows.length,
+    avg: d.length ? d.reduce((a, b) => a + b, 0) / d.length : 0,
+    max: d.length ? Math.max(...d) : 0,
+    strikes: rows.reduce((n, r) => n + evs(r).length, 0),
+    warns: rows.reduce((n, r) => n + evs(r).filter(e => e.w).length, 0),
+    strikeTrips: rows.filter(r => evs(r).length).length,
+    extra: rows.filter(r => r.extra && r.extra.length).length
+  };
+}
+function flaggedList(){
+  const out = [];
+  S.classes.forEach(c => {
+    const m = infoMap(S.logs[c.id] || []);
+    Object.entries(m).forEach(([name, i]) => { if (i.warns || i.strikes) out.push({cid:c.id, name, cls:c.name, warns:i.warns, strikes:i.strikes, last:i.last}); });
+  });
+  return out.sort((a, b) => b.warns - a.warns || b.strikes - a.strikes || b.last - a.last);
+}
+const teachersOf = cid => S.teachers.filter(t => t.classIds.includes(cid));
+function tags(r){
+  let h = '';
+  evs(r).forEach(e => {
+    h += `<span class="pill out">Strike${e.n ? ' ' + e.n + (e.sl ? ' of ' + e.sl : '') : ''} (${KIND[e.k] || 'strike'})</span> `;
+    if (e.w) h += `<span class="pill out">Warning</span> `;
+  });
+  if (r.extra && r.extra.length) h += `<span class="pill muted">Allowed anyway</span>`;
+  return h;
+}
+
+/* ---------- small ui helpers ---------- */
+const topbar = (who, back) => `<div class="topbar">${back ? '<button class="btn small ghost" data-act="navback">‹ Back</button>' : `<span class="note">${esc(who)}</span>`}<button class="btn small ghost" data-act="logout">Log out</button></div>`;
+const searchBox = (scope, ph) => `<input class="search" id="q-${scope}" type="search" data-search="${scope}" value="${esc(S.q[scope] || '')}" placeholder="${esc(ph)}" aria-label="${esc(ph)}" autocomplete="off">`;
+function meter(n, limit){
+  if (limit > 8) return `<span class="warn">${n} of ${limit}</span>`;
+  let d = ''; for (let i = 0; i < limit; i++) d += `<i class="${i < n ? 'on' : ''}"></i>`;
+  return `<span class="meter" role="img" aria-label="${n} of ${limit} strikes">${d}</span>`;
+}
+function dayBuckets(rows, n){
+  const t0 = startOfToday(), b = [];
+  for (let i = n - 1; i >= 0; i--) { const d = new Date(t0); d.setDate(d.getDate() - i); b.push({ts:d.getTime(), n:0, s:0}); }
+  rows.forEach(r => { const d = new Date(r.out); d.setHours(0,0,0,0); const x = b.find(y => y.ts === d.getTime()); if (x) { x.n++; if (evs(r).length) x.s++; } });
+  b.forEach(x => {
+    const d = new Date(x.ts);
+    x.label = n <= 8 ? d.toLocaleDateString([], {weekday:'short'}) : String(d.getDate());
+    x.full = d.toLocaleDateString([], {month:'short', day:'numeric'});
+  });
+  return b;
+}
+function chartHtml(b){
+  const max = Math.max(1, ...b.map(x => x.n));
+  const every = b.length > 20 ? 2 : 1;
+  const cols = b.map(x => {
+    const pct = x.n ? Math.max(6, Math.round(x.n / max * 100)) : 0;
+    return `<div class="col" title="${esc(x.full)}: ${plural(x.n, 'trip')}">${x.n ? `<span class="v" style="bottom:calc(${pct}% + 2px)">${x.n}</span>` : ''}<div class="stack" style="height:${pct}%">${x.s ? `<i class="s" style="flex:${x.s}"></i>` : ''}${x.n - x.s > 0 ? `<i class="t" style="flex:${x.n - x.s}"></i>` : ''}</div></div>`;
+  }).join('');
+  const labels = b.map((x, i) => `<span>${i % every === 0 ? esc(x.label) : ''}</span>`).join('');
+  return `<div class="chart" role="img" aria-label="Trips per day">${cols}</div><div class="xlabels">${labels}</div>
+    <div class="legend"><span><i class="t"></i>Trips</span><span><i class="s"></i>Trips with a strike</span></div>`;
+}
+
+/* ---------- shell ---------- */
+function shell(head, body, tabs){
+  $app.innerHTML =
+    `<header class="head">${head}</header><main>${body}</main>` +
+    (tabs ? `<nav class="tabs" aria-label="Sections">${tabs.map(t =>
+      `<button data-act="tab" data-tab="${t[0]}" class="${S.tab === t[0] ? 'on' : ''}" ${S.tab === t[0] ? 'aria-current="page"' : ''}>${t[1]}</button>`).join('')}</nav>` : '');
+  tick();
+}
+function render(){
+  if (S.needCode) return viewCode();
+  if (!S.device) return viewWelcome();
+  if (S.device.role === 'teacher') return viewTeacher();
+  return S.unlocked ? viewAdmin() : viewPin();
+}
+function resultsHtml(scope){
+  const q = (S.q[scope] || '').trim();
+  if (scope === 'roster') return rosterGrid(q);
+  if (scope === 'live') return liveResults(q);
+  if (scope === 'flagged') return flaggedResults(q);
+  if (scope === 'reports') return reportsResults(q);
+  if (scope === 'classes') return classesResults(q);
+  if (scope === 'class') { const t = S.nav[S.nav.length - 1]; return t ? classStudents(t.id, q) : ''; }
+  return '';
+}
+
+/* ---------- school code / connection ---------- */
+function viewCode(){
+  $app.innerHTML = `<div class="welcome"><h1 class="title">School code</h1>
+    <p>Enter the school code your admin gave you. You only need to do this once on each phone.</p>
+    <input id="code" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="School code" aria-label="School code">
+    <div class="stack" style="margin-top:12px"><button class="btn" data-act="savecode">Continue</button></div></div>`;
+}
+function viewError(){
+  $app.innerHTML = `<div class="welcome"><h1 class="title">Can\u2019t connect</h1>
+    <p>Hall Pass could not reach its database. Check your internet connection. If this keeps happening, ask your admin to check that the database is running.</p>
+    <div class="stack"><button class="btn" data-act="retry">Try again</button></div></div>`;
+}
+
+/* ---------- welcome / pin ---------- */
+function viewWelcome(){
+  $app.innerHTML = `<div class="welcome">
+    <h1 class="title">Hall Pass</h1>
+    <p>Send students to the bathroom, time every trip, and keep a log the front office can see.</p>
+    <div class="stack">
+      <button class="btn" data-act="role" data-role="teacher">I'm a teacher</button>
+      <button class="btn ghost" data-act="role" data-role="admin">I'm an administrator</button>
+    </div></div>`;
+}
+function viewPin(){
+  const hasPin = !!S.settings.pin;
+  $app.innerHTML = `<div class="welcome">
+    <h1 class="title">${hasPin ? 'Enter admin PIN' : 'Create an admin PIN'}</h1>
+    <p>${hasPin ? 'Admins see every class, every strike and warning, and the full log.' : 'Choose 4 to 8 digits. You will use it to open the admin view.'}</p>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="PIN" aria-label="PIN">
+    <div class="stack" style="margin-top:12px">
+      <button class="btn" data-act="${hasPin ? 'unlock' : 'setpin'}">${hasPin ? 'Open admin view' : 'Save PIN'}</button>
+      <button class="linkbtn" data-act="logout">Back</button>
+    </div></div>`;
+}
+
+/* ---------- teacher ---------- */
+function viewPickTeacher(){
+  if (S.loginTeacher) {
+    const t = S.teachers.find(x => x.id === S.loginTeacher);
+    $app.innerHTML = `<div class="welcome"><h1 class="title">Hi, ${esc(t ? t.name : '')}</h1>
+      <p>Enter your PIN to continue.</p>
+      <input id="tpin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="PIN" aria-label="PIN">
+      <div class="stack" style="margin-top:12px"><button class="btn" data-act="checktpin">Continue</button>
+      <button class="linkbtn" data-act="cancelpick">Choose a different name</button></div></div>`;
+    return;
+  }
+  const list = S.teachers.length
+    ? S.teachers.map(t => `<button class="stu full" data-act="pickteacher" data-id="${esc(t.id)}">${esc(t.name)}<small>${plural(t.classIds.length, 'class')}</small></button>`).join('')
+    : `<div class="empty">No teachers have been added yet. Ask your admin to add you in the Classes tab.</div>`;
+  $app.innerHTML = `<header class="head"><h1 class="title">Who are you?</h1><p class="sub">This phone will stay logged in as you until you tap Log out.</p></header>
+    <main>${list}<button class="linkbtn" data-act="logout">Back</button></main>`;
+}
+
+function viewTeacher(){
+  if (!S.me) return viewPickTeacher();
+  const mine = myClasses();
+  if (!mine.length || !S.cls) {
+    $app.innerHTML = `<header class="head">${topbar('Logged in as ' + S.me.name)}<h1 class="title">No classes yet</h1></header>
+      <div class="empty">No classes are assigned to you yet. Ask your admin to add you to your classes.</div>
+      <div class="stack" style="margin-top:14px"><button class="btn ghost" data-act="refresh">Check again</button></div>`;
+    return;
+  }
+  const chips = mine.length > 1 ? `<div class="chips">${mine.map(c => {
+    const n = (S.logs[c.id] || []).filter(r => !r.in).length;
+    return `<button class="chip ${c.id === S.cls.id ? 'on' : ''}" data-act="setclass" data-id="${esc(c.id)}">${esc(c.name)}${n ? `<span class="dot" aria-label="${n} out">${n}</span>` : ''}</button>`;
+  }).join('')}</div>` : '';
+  const head = `${topbar('Logged in as ' + S.me.name)}<h1 class="title">${esc(S.cls.name)}</h1>${chips}`;
+  const tabs = [['roster','Bathroom'], ['history','History'], ['class','Students']];
+  const body = (S.tab === 'history' ? teacherHistory() : S.tab === 'class' ? rosterEditor(S.cls, false) : teacherRoster()) + sheetHtml();
+  shell(head, body, tabs);
+}
+
+function sheetHtml(){
+  if (!S.confirm) return '';
+  const c = S.confirm;
+  const isDaily = c.reasons.some(r => r.k === 'daily');
+  return `<div class="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">Allow ${esc(c.name)} to go anyway?</h2>
+    ${c.reasons.map(r => `<p>${esc(r.t)}</p>`).join('')}
+    <p class="note" style="margin-bottom:14px">${isDaily ? 'Because this is more than the daily trips allowed, it will count as a strike. ' : ''}The trip is saved in the log as "Allowed anyway" and the admin can see it.</p>
+    <div class="stack"><button class="btn" data-act="allow">Allow anyway</button><button class="btn ghost" data-act="cancelallow">Cancel</button></div></div></div>`;
+}
+
+function rosterGrid(q){
+  const log = curLog(), s = S.settings;
+  const outNames = new Set(log.filter(r => !r.in).map(r => r.student));
+  const info = infoMap(log);
+  const blocked = {B: !!outLimitText(log, 'B'), G: !!outLimitText(log, 'G'), '': !!outLimitText(log, '')};
+  let roster = rosterOf(S.cls);
+  if (!roster.length) return `<div class="empty">This class has no students yet.<div style="margin-top:12px"><button class="btn small" data-act="tab" data-tab="class">Add students</button></div></div>`;
+  roster = roster.filter(x => match(q, x.name));
+  if (!roster.length) return `<div class="empty">No student matches "${esc(q)}".</div>`;
+  return `<div class="grid">` + [...roster].sort((a, b) => a.name.localeCompare(b.name)).map(st => {
+    const n = st.name, i = info[n] || {today:0, strikes:0, warns:0};
+    const sl = (i.strikes || i.warns) ? `<small class="warn">${i.strikes} of ${s.strikeLimit} strikes${i.warns ? ', ' + plural(i.warns, 'warning') : ''}</small>` : '';
+    if (outNames.has(n)) return `<button class="stu" disabled>${esc(n)}<small>In the bathroom</small>${sl}</button>`;
+    const daily = i.today >= s.maxTrips, wait = blocked[st.gender || ''];
+    const line = daily ? 'Daily limit reached' : wait ? 'Out limit reached' : i.today ? `${i.today} of ${s.maxTrips} trips today` : '';
+    return `<button class="stu ${daily || wait ? 'blocked' : ''}" data-act="out" data-name="${esc(n)}">${esc(n)}${line ? `<small>${line}</small>` : ''}${sl}</button>`;
+  }).join('') + `</div>`;
+}
+
+function teacherRoster(){
+  const log = curLog(), s = S.settings;
+  const out = log.filter(r => !r.in);
+  let h = '';
+  if (out.length) {
+    h += `<div class="section" style="margin-top:0"><h2>In the bathroom now</h2>` + out.map(r => `
+      <div class="pass">
+        <div class="top"><div><div class="who">${esc(r.student)}</div><div class="overnote">Over ${nm(s.maxMin)} min. This will be a strike.</div></div>
+        <div class="clock" data-out="${r.out}">${fmt(Date.now() - r.out)}</div></div>
+        <button class="btn fixed-dark" data-act="back" data-id="${esc(r.id)}">Back in class</button>
+      </div>`).join('') + `</div>`;
+  } else {
+    h += `<div class="empty">Nobody is in the bathroom.</div>`;
+  }
+  h += `<div class="section"><h2>Send a student to the bathroom</h2>`;
+  if (rosterOf(S.cls).length > 8) h += searchBox('roster', 'Search students');
+  h += `<div id="results">${rosterGrid((S.q.roster || '').trim())}</div>`;
+  const outRule = s.outMode === 'gender' ? `${plural(s.maxBoys, 'boy')} and ${plural(s.maxGirls, 'girl')} can be out at once` : `${plural(s.maxOut, 'student')} can be out at once`;
+  h += `<p class="note" style="margin-top:14px">${outRule}. Each trip can be ${nm(s.maxMin)} minutes. Each student can go ${plural(s.maxTrips, 'time')} a day. A longer trip is a strike, and so is going more times than allowed. ${plural(s.strikeLimit, 'strike')} earn a warning. If a limit is reached you can still tap a student and choose Allow anyway.</p></div>`;
+  return h;
+}
+
+function teacherHistory(){
+  const log = [...curLog()].sort((a, b) => b.out - a.out);
+  const s = S.settings, t0 = startOfToday();
+  const st = stats(log.filter(r => r.out >= t0));
+  const info = infoMap(log);
+  const listed = Object.entries(info).filter(([, i]) => i.strikes || i.warns).sort((a, b) => b[1].warns - a[1].warns || b[1].strikes - a[1].strikes);
+  let h = `<div class="stats">
+    <div class="stat"><b>${st.n}</b><span>Trips today</span></div>
+    <div class="stat"><b>${st.avg ? durText(st.avg) : '–'}</b><span>Average trip today</span></div></div>`;
+  h += `<div class="card" style="margin-top:10px"><div class="name" style="font-size:15px">Strikes and warnings since ${shortDate(periodStart())}</div>` +
+    (listed.length ? `<p style="margin-top:6px">${listed.map(([n, i]) => `${esc(n)}: <span class="warn">${i.strikes} of ${s.strikeLimit} strikes${i.warns ? ', ' + plural(i.warns, 'warning') : ''}</span>`).join('<br>')}</p>` : `<p class="note" style="margin-top:6px">No strikes or warnings this period.</p>`) +
+    `<p class="note" style="margin-top:6px">Everything resets on ${shortDate(nextReset())}.</p></div>`;
+  if (!log.length) return h + `<div class="empty" style="margin-top:18px">No trips logged yet.</div>`;
+  let lastDay = '';
+  log.slice(0, 120).forEach(r => {
+    const d = dayLabel(r.out);
+    if (d !== lastDay) { h += `<div class="day">${d === dayLabel(Date.now()) ? 'Today' : d}</div>`; lastDay = d; }
+    const asking = S.pending === r.id;
+    h += `<div class="log"><div class="l"><div class="who">${esc(r.student)} ${tags(r)}</div>
+      <div class="meta">${tm(r.out)}${r.in ? ' to ' + tm(r.in) : ' (still out)'}${r.by ? ', sent by ' + esc(r.by) : ''}</div></div>
+      <div class="r"><div class="who">${r.in ? durText(r.in - r.out) : '…'}</div>
+      <button class="linkbtn" style="padding:2px 0;font-size:13px" data-act="delentry" data-id="${esc(r.id)}">${asking ? 'Tap again to remove' : 'Remove'}</button></div></div>`;
+  });
+  return h;
+}
+
+function rosterEditor(c, admin){
+  const list = rosterOf(c).sort((a, b) => a.name.localeCompare(b.name));
+  const b = list.filter(x => x.gender === 'B').length, g = list.filter(x => x.gender === 'G').length, u = list.length - b - g;
+  const shared = S.teachers.filter(t => t.classIds.includes(c.id) && (!S.me || t.id !== S.me.id)).map(t => t.name);
+  return `<div class="section" style="margin-top:0"><h2>Add students to ${esc(c.name)}</h2>
+    <p class="note" style="margin-bottom:10px">${shared.length ? `Shared with ${esc(shared.join(', '))}. ` : ''}Choose Boy or Girl first, then type a name. To add several at once, paste one name per line.</p>
+    <div class="seg two" role="group" aria-label="Gender of the students you are adding">
+      <button class="${S.addGender === 'B' ? 'on' : ''}" aria-pressed="${S.addGender === 'B'}" data-act="pickgender" data-g="B">Boy</button>
+      <button class="${S.addGender === 'G' ? 'on' : ''}" aria-pressed="${S.addGender === 'G'}" data-act="pickgender" data-g="G">Girl</button></div>
+    <textarea id="names" style="margin-top:10px" aria-label="Student names" placeholder="Student name">${esc(S.draft)}</textarea>
+    <div style="margin-top:10px"><button class="btn" data-act="addstudents">Add students</button></div></div>
+    <div class="section"><h2>${plural(list.length, 'student')}${list.length ? ` (${plural(b, 'boy')}, ${plural(g, 'girl')}${u ? `, ${u} not set` : ''})` : ''}</h2>
+    ${list.length ? list.map(x => `<div class="srow"><span class="sname">${esc(x.name)}${x.gender ? '' : ' <span class="warn">choose Boy or Girl</span>'}</span>
+      <div class="seg two small" role="group" aria-label="Gender of ${esc(x.name)}">
+        <button class="${x.gender === 'B' ? 'on' : ''}" data-act="setgender" data-name="${esc(x.name)}" data-g="B">Boy</button>
+        <button class="${x.gender === 'G' ? 'on' : ''}" data-act="setgender" data-name="${esc(x.name)}" data-g="G">Girl</button></div>
+      <button class="linkbtn" style="padding:6px 0" data-act="rmstudent" data-name="${esc(x.name)}">${S.pending === 'rm:' + x.name ? 'Sure?' : 'Remove'}</button></div>`).join('') : `<div class="empty">No students yet.</div>`}
+    <p class="note" style="margin-top:10px">Removing a student keeps their past trips in the log.</p>
+    ${admin ? '<div style="margin-top:14px"><button class="btn ghost" data-act="closeedit">Back to classes</button></div>' : ''}</div>`;
+}
+
+/* ---------- admin: shell, live ---------- */
+function viewAdmin(){
+  const nFlag = flaggedList().filter(f => f.warns).length;
+  const tabs = [['live','Live'], ['flagged','Flagged' + (nFlag ? `<span class="badge">${nFlag}</span>` : '')], ['reports','Reports'], ['classes','Classes'], ['limits','Limits']];
+  const top = S.nav[S.nav.length - 1];
+  if (top) {
+    const d = detailView(top);
+    shell(`${topbar('', true)}<h1 class="title">${esc(d.title)}</h1>${d.sub ? `<p class="sub">${d.sub}</p>` : ''}`, d.body, tabs);
+    return;
+  }
+  const heads = {live:'Right now', flagged:'Strikes and warnings', reports:'Reports', classes:'Classes and teachers', limits:'Limits'};
+  const head = `${topbar('Logged in as admin')}<h1 class="title">${heads[S.tab] || heads.live}</h1>`;
+  const body = S.tab === 'flagged' ? adminFlagged() : S.tab === 'reports' ? adminReports() : S.tab === 'classes' ? adminClasses() : S.tab === 'limits' ? adminLimits() : adminLive();
+  shell(head, body, tabs);
+}
+
+function liveData(){
+  const t0 = startOfToday(), lim = S.settings.maxMin * 60000, now = Date.now();
+  const d = {outN:0, today:0, strikes:0, over:[], warnsToday:[]};
+  S.classes.forEach(c => (S.logs[c.id] || []).forEach(r => {
+    if (!r.in) { d.outN++; if (now - r.out > lim) d.over.push({cid:c.id, cls:c.name, name:r.student, out:r.out}); }
+    if (r.out >= t0) { d.today++; d.strikes += evs(r).length; if (evs(r).some(e => e.w)) d.warnsToday.push({cid:c.id, cls:c.name, name:r.student}); }
+  }));
+  return d;
+}
+
+function classCard(c){
+  const log = S.logs[c.id] || [], lim = S.settings.maxMin * 60000, now = Date.now(), t0 = startOfToday();
+  const out = log.filter(r => !r.in), over = out.filter(r => now - r.out > lim).length;
+  const st = stats(log.filter(r => r.out >= t0));
+  const tn = teachersOf(c.id).map(t => t.name).join(', ');
+  const pill = over ? `<span class="pill out">${over} over time</span>` : out.length ? `<span class="pill amber">${out.length} out</span>` : `<span class="pill">All in class</span>`;
+  return `<div class="card tap ${over ? 'hot' : ''}" role="button" tabindex="0" data-act="open" data-type="class" data-id="${esc(c.id)}">
+    <div class="row"><div><div class="name">${esc(c.name)}</div><div class="note">${esc(tn || 'No teachers assigned')}</div></div><div>${pill}<span class="chev">›</span></div></div>
+    ${out.map(r => `<div class="mini ${now - r.out > lim ? 'over' : ''}"><span>${esc(r.student)}</span><span class="t" data-out="${r.out}">${fmt(now - r.out)}</span></div>`).join('')}
+    <div class="note" style="margin-top:8px">${plural(st.n, 'trip')} today${st.strikes ? `, <span class="warn">${plural(st.strikes, 'strike')}</span>` : ''}</div></div>`;
+}
+
+function studentRow(cid, name, sub){
+  const c = S.classes.find(x => x.id === cid), s = S.settings;
+  const log = S.logs[cid] || [];
+  const info = infoMap(log)[name] || {today:0, strikes:0, warns:0};
+  const out = log.find(r => !r.in && r.student === name);
+  const g = (rosterOf(c).find(x => x.name === name) || {}).gender;
+  return `<div class="log tap" role="button" tabindex="0" data-act="open" data-type="student" data-cid="${esc(cid)}" data-name="${esc(name)}">
+    <div class="l"><div class="who">${esc(name)} ${g ? `<span class="pill muted">${genderLabel(g)}</span>` : ''} ${out ? '<span class="pill amber">In bathroom</span>' : ''}</div>
+    <div class="meta">${esc(sub != null ? sub : (c ? c.name : ''))}</div></div>
+    <div class="r">${meter(info.strikes, s.strikeLimit)}${info.warns ? ` <span class="pill out">${plural(info.warns, 'warning')}</span>` : ''}<span class="chev">›</span></div></div>`;
+}
+
+function liveResults(q){
+  const cs = [...S.classes];
+  if (!q) {
+    if (!cs.length) return `<div class="empty">No classes yet. Add them in the Classes tab.</div>`;
+    const now = Date.now(), lim = S.settings.maxMin * 60000;
+    const score = c => (S.logs[c.id] || []).filter(r => !r.in && now - r.out > lim).length * 100 + (S.logs[c.id] || []).filter(r => !r.in).length;
+    return cs.sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name)).map(classCard).join('');
+  }
+  const mc = cs.filter(c => match(q, c.name));
+  const ms = [];
+  cs.forEach(c => rosterOf(c).forEach(x => { if (match(q, x.name)) ms.push({cid:c.id, name:x.name}); }));
+  if (!mc.length && !ms.length) return `<div class="empty">Nothing matches "${esc(q)}".</div>`;
+  return mc.map(classCard).join('') + (ms.length ? `<h2 style="font-size:15px;margin:14px 0 4px">Students</h2>` + ms.slice(0, 40).map(m => studentRow(m.cid, m.name)).join('') : '');
+}
+
+function adminLive(){
+  const d = liveData();
+  let h = `<div class="kpis">
+    <div class="kpi teal"><b>${d.outN}</b><span>In bathroom now</span></div>
+    <div class="kpi blue"><b>${d.today}</b><span>Trips today</span></div>
+    <div class="kpi orange"><b>${d.strikes}</b><span>Strikes today</span></div></div>`;
+  if (d.over.length || d.warnsToday.length) {
+    h += `<div class="section"><h2>Needs attention</h2>` +
+      d.over.map(o => `<div class="card hot tap" role="button" tabindex="0" data-act="open" data-type="student" data-cid="${esc(o.cid)}" data-name="${esc(o.name)}"><div class="row"><div><div class="name">${esc(o.name)}</div><div class="note">${esc(o.cls)}, over the time limit</div></div><div><span class="warn" style="font-variant-numeric:tabular-nums;font-size:20px" data-out="${o.out}">${fmt(Date.now() - o.out)}</span><span class="chev">›</span></div></div></div>`).join('') +
+      d.warnsToday.map(o => `<div class="card hot tap" role="button" tabindex="0" data-act="open" data-type="student" data-cid="${esc(o.cid)}" data-name="${esc(o.name)}"><div class="row"><div><div class="name">${esc(o.name)}</div><div class="note">${esc(o.cls)}</div></div><div><span class="pill out">Got a warning today</span><span class="chev">›</span></div></div></div>`).join('') + `</div>`;
+  }
+  h += `<div class="section"><h2>Classes</h2>${searchBox('live', 'Search students or classes')}<div id="results">${liveResults((S.q.live || '').trim())}</div></div>`;
+  return h;
+}
+
+/* ---------- admin: flagged ---------- */
+function flaggedResults(q){
+  const s = S.settings, list = flaggedList().filter(f => match(q, f.name, f.cls));
+  const warned = list.filter(f => f.warns), strikesOnly = list.filter(f => !f.warns);
+  let h = `<div class="section" style="margin-top:0"><h2>Students with a warning</h2>` + (warned.length
+    ? warned.map(f => `<div class="card hot tap" role="button" tabindex="0" data-act="open" data-type="student" data-cid="${esc(f.cid)}" data-name="${esc(f.name)}"><div class="row"><div><div class="name">${esc(f.name)}</div><div class="note">${esc(f.cls)}, now at ${f.strikes} of ${s.strikeLimit} strikes</div></div><div><span class="pill out">${plural(f.warns, 'warning')}</span><span class="chev">›</span></div></div></div>`).join('')
+    : `<div class="empty">${q ? `No warnings match "${esc(q)}".` : 'No student has earned a warning this period.'}</div>`) + `</div>`;
+  if (strikesOnly.length) h += `<div class="section"><h2>Students with strikes</h2>` + strikesOnly.map(f => studentRow(f.cid, f.name)).join('') + `</div>`;
+  return h;
+}
+function adminFlagged(){
+  const s = S.settings;
+  return `<p class="note" style="margin-bottom:12px">A strike is a trip over ${nm(s.maxMin)} minutes, or a trip beyond the ${plural(s.maxTrips, 'trip')} allowed in a day. Every ${plural(s.strikeLimit, 'strike')} earns a warning, and strikes start again from 0. Everything resets on ${shortDate(nextReset())}. Tap a student for details.</p>` +
+    searchBox('flagged', 'Search students') + `<div id="results">${flaggedResults((S.q.flagged || '').trim())}</div>`;
+}
+
+/* ---------- admin: reports (kept simple) ---------- */
+function allRows(){
+  const rows = [];
+  S.classes.forEach(c => (S.logs[c.id] || []).forEach(r => rows.push(Object.assign({}, r, {cls:c.name, cid:c.id}))));
+  return rows.sort((a, b) => b.out - a.out);
+}
+const RANGE_LABEL = {today:'Today', '7':'Last 7 days', '30':'Last 30 days', all:'All time'};
+function rangeRows(){
+  const t0 = startOfToday();
+  const from = S.range === 'today' ? t0 : S.range === '7' ? t0 - 6 * DAY : S.range === '30' ? t0 - 29 * DAY : 0;
+  return allRows().filter(r => r.out >= from);
+}
+function reportsResults(q){
+  const rows = rangeRows();
+  if (!q) {
+    const byClass = S.classes.map(c => { const rr = rows.filter(r => r.cid === c.id); const st = stats(rr); return {c, n:rr.length, s:st.strikeTrips, w:st.warns}; }).sort((a, b) => b.n - a.n);
+    const max = Math.max(1, ...byClass.map(x => x.n));
+    let h = `<div class="section" style="margin-top:0"><h2>Classes</h2>` + (byClass.length ? byClass.map(x =>
+      `<div class="bar tap" role="button" tabindex="0" data-act="open" data-type="class" data-id="${esc(x.c.id)}"><span title="${esc(x.c.name)}">${esc(x.c.name)}</span><div class="track"><i class="s" style="width:${Math.round(x.s / max * 100)}%"></i><i class="t" style="width:${Math.round((x.n - x.s) / max * 100)}%"></i></div><b>${x.n}</b></div>`).join('') : `<div class="empty">No classes yet.</div>`) + `</div>`;
+    const by = {};
+    rows.forEach(r => { const k = r.cid + '|' + r.student; const o = by[k] || (by[k] = {cid:r.cid, name:r.student, s:0, w:0, n:0}); o.n++; o.s += evs(r).length; o.w += evs(r).filter(e => e.w).length; });
+    const watch = Object.values(by).filter(x => x.s).sort((a, b) => b.w - a.w || b.s - a.s).slice(0, 5);
+    h += `<div class="section"><h2>Students to watch</h2>` + (watch.length ? watch.map(x => studentRow(x.cid, x.name, `${plural(x.s, 'strike')}, ${plural(x.n, 'trip')} in this range`)).join('') : `<div class="empty">No strikes in this range.</div>`) + `</div>`;
+    return h;
+  }
+  const found = [];
+  S.classes.forEach(c => rosterOf(c).forEach(x => { if (match(q, x.name, c.name)) found.push({cid:c.id, name:x.name}); }));
+  if (!found.length) return `<div class="empty">Nothing matches "${esc(q)}".</div>`;
+  return found.slice(0, 40).map(f => {
+    const rr = rows.filter(r => r.cid === f.cid && r.student === f.name), st = stats(rr);
+    return studentRow(f.cid, f.name, `${plural(st.n, 'trip')}, ${plural(st.strikes, 'strike')} in this range`);
+  }).join('');
+}
+function adminReports(){
+  const rows = rangeRows(), st = stats(rows);
+  const seg = [['today','Today'], ['7','7 days'], ['30','30 days'], ['all','All']];
+  const days = S.range === 'today' || S.range === '7' ? 7 : 30;
+  const b = dayBuckets(allRows(), days);
+  return `<div class="seg" role="group" aria-label="Date range">${seg.map(x => `<button class="${S.range === x[0] ? 'on' : ''}" data-act="range" data-r="${x[0]}">${x[1]}</button>`).join('')}</div>
+    <div class="kpis" style="margin-top:12px">
+      <div class="kpi teal"><b>${st.n}</b><span>Trips</span></div>
+      <div class="kpi orange"><b>${st.strikes}</b><span>Strikes</span></div>
+      <div class="kpi red"><b>${st.warns}</b><span>Warnings</span></div></div>
+    <p class="note" style="margin-top:8px">${st.n ? `Average trip ${durText(st.avg)}. ` : ''}${st.extra ? `${plural(st.extra, 'trip')} allowed anyway.` : ''}</p>
+    <div class="card" style="margin-top:12px"><div class="name" style="font-size:15px">Trips per day (last ${days} days)</div>${chartHtml(b)}</div>
+    <div class="section" style="margin-top:18px"><button class="btn green" data-act="xlsx">Export to Excel</button>
+      <p class="note" style="margin-top:8px">One file with colors, charts, a list of students to watch, every trip, and your limits (including each time you changed them).</p></div>
+    <div class="section">${searchBox('reports', 'Search students')}<div id="results">${reportsResults((S.q.reports || '').trim())}</div></div>
+    <div class="section" style="margin-top:8px"><button class="linkbtn" data-act="csv">Download a simple CSV instead</button></div>`;
+}
+
+/* ---------- admin: detail views ---------- */
+function detailView(t){
+  if (t.t === 'class') return classDetail(t.id);
+  if (t.t === 'student') return studentDetail(t.cid, t.name);
+  if (t.t === 'teacher') return teacherDetail(t.id);
+  return {title:'', sub:'', body:''};
+}
+
+function classStudents(cid, q){
+  const c = S.classes.find(x => x.id === cid); if (!c) return '';
+  const list = rosterOf(c).filter(x => match(q, x.name)).sort((a, b) => a.name.localeCompare(b.name));
+  if (!rosterOf(c).length) return `<div class="empty">No students in this class yet.</div>`;
+  if (!list.length) return `<div class="empty">No student matches "${esc(q)}".</div>`;
+  const info = infoMap(S.logs[cid] || []), s = S.settings;
+  return list.map(x => studentRow(cid, x.name, `${(info[x.name] || {today:0}).today} of ${s.maxTrips} trips today`)).join('');
+}
+
+function classDetail(cid){
+  const c = S.classes.find(x => x.id === cid);
+  if (!c) return {title:'Class not found', sub:'', body:`<div class="empty">This class no longer exists.</div>`};
+  const log = S.logs[cid] || [], now = Date.now(), lim = S.settings.maxMin * 60000, t0 = startOfToday();
+  const out = log.filter(r => !r.in), today = log.filter(r => r.out >= t0), st = stats(today);
+  const ts = teachersOf(cid);
+  let h = `<div class="kpis"><div class="kpi teal"><b>${out.length}</b><span>In bathroom now</span></div>
+    <div class="kpi blue"><b>${st.n}</b><span>Trips today</span></div>
+    <div class="kpi orange"><b>${st.strikes}</b><span>Strikes today</span></div></div>`;
+  h += `<div class="section"><h2>Teachers</h2>${ts.length ? `<div class="chips wrap">${ts.map(t => `<button class="chip" data-act="open" data-type="teacher" data-id="${esc(t.id)}">${esc(t.name)}</button>`).join('')}</div>` : '<div class="note">No teachers assigned yet.</div>'}</div>`;
+  if (out.length) h += `<div class="section"><h2>In the bathroom now</h2>` + out.map(r =>
+    `<div class="card tap ${now - r.out > lim ? 'hot' : ''}" role="button" tabindex="0" data-act="open" data-type="student" data-cid="${esc(cid)}" data-name="${esc(r.student)}"><div class="row"><div><div class="name">${esc(r.student)}</div><div class="note">${r.by ? 'Sent by ' + esc(r.by) : ''}</div></div><div class="mini ${now - r.out > lim ? 'over' : ''}" style="border:0;padding:0"><span class="t" style="font-size:22px" data-out="${r.out}">${fmt(now - r.out)}</span><span class="chev">›</span></div></div></div>`).join('') + `</div>`;
+  h += `<div class="section"><h2>Trips per day (last 14 days)</h2><div class="card">${chartHtml(dayBuckets(log, 14))}</div></div>`;
+  h += `<div class="section"><h2>Students</h2>${rosterOf(c).length > 6 ? searchBox('class', 'Search students in this class') : ''}<div id="results">${classStudents(cid, (S.q.class || '').trim())}</div>
+    <div style="margin-top:12px"><button class="btn ghost" data-act="editclassfromdetail" data-id="${esc(cid)}">Add or edit students</button></div></div>`;
+  return {title:c.name, sub:ts.length ? esc(ts.map(t => t.name).join(', ')) : '', body:h};
+}
+
+function studentDetail(cid, name){
+  const c = S.classes.find(x => x.id === cid), s = S.settings;
+  const all = S.logs[cid] || [];
+  const rec = rosterOf(c).find(x => x.name === name) || {name, gender:''};
+  const log = all.filter(r => r.student === name).sort((a, b) => b.out - a.out);
+  const info = infoMap(all)[name] || {today:0, strikes:0, warns:0};
+  const out = log.find(r => !r.in), st = stats(log);
+  const sub = `${c ? `<button class="linkbtn inl" data-act="open" data-type="class" data-id="${esc(cid)}">${esc(c.name)}</button>` : ''}${rec.gender ? ', ' + genderLabel(rec.gender) : ''}`;
+  let h = '';
+  if (out) h += `<div class="card ${Date.now() - out.out > s.maxMin * 60000 ? 'hot' : ''}"><div class="row"><div><div class="name">In the bathroom</div><div class="note">${out.by ? 'Sent by ' + esc(out.by) + ' at ' : 'Since '}${tm(out.out)}</div></div><span class="t warn" style="font-size:24px;font-variant-numeric:tabular-nums" data-out="${out.out}">${fmt(Date.now() - out.out)}</span></div></div>`;
+  else h += `<div class="card"><span class="pill">In class</span></div>`;
+  h += `<div class="card"><div class="row"><div><div class="name" style="font-size:15px">Strikes this period</div><div class="note">${info.strikes} of ${s.strikeLimit}. Resets ${shortDate(nextReset())}.</div></div><div>${meter(info.strikes, s.strikeLimit)}</div></div>
+    ${info.warns ? `<div style="margin-top:8px"><span class="pill out">${plural(info.warns, 'warning')} this period</span></div>` : ''}</div>`;
+  h += `<div class="stats"><div class="stat"><b>${info.today} of ${s.maxTrips}</b><span>Trips today</span></div>
+    <div class="stat"><b>${st.n}</b><span>Trips, all time</span></div>
+    <div class="stat"><b>${st.avg ? durText(st.avg) : '–'}</b><span>Average trip</span></div>
+    <div class="stat"><b>${st.max ? durText(st.max) : '–'}</b><span>Longest trip</span></div></div>`;
+  h += `<div class="section"><h2>Trips per day (last 14 days)</h2><div class="card">${chartHtml(dayBuckets(log, 14))}</div></div>`;
+  h += `<div class="section"><h2>All trips</h2>`;
+  if (!log.length) h += `<div class="empty">No trips yet.</div>`;
+  let lastDay = '';
+  log.slice(0, 80).forEach(r => {
+    const d = dayLabel(r.out);
+    if (d !== lastDay) { h += `<div class="day">${d === dayLabel(Date.now()) ? 'Today' : d}</div>`; lastDay = d; }
+    h += `<div class="log"><div class="l"><div class="who">${tm(r.out)}${r.in ? ' to ' + tm(r.in) : ' (still out)'}</div><div class="meta">${r.by ? 'Sent by ' + esc(r.by) : ''}</div><div style="margin-top:2px">${tags(r)}</div></div><div class="r"><div class="who">${r.in ? durText(r.in - r.out) : '…'}</div></div></div>`;
+  });
+  h += `</div>`;
+  return {title:name, sub, body:h};
+}
+
+function teacherDetail(id){
+  const t = S.teachers.find(x => x.id === id);
+  if (!t) return {title:'Teacher not found', sub:'', body:`<div class="empty">This teacher no longer exists.</div>`};
+  const from = startOfToday() - 29 * DAY;
+  const rows = allRows().filter(r => (r.bid ? r.bid === t.id : r.by === t.name) && r.out >= from);
+  const st = stats(rows);
+  const cls = S.classes.filter(c => t.classIds.includes(c.id));
+  let h = `<div class="kpis"><div class="kpi teal"><b>${st.n}</b><span>Trips sent (30 days)</span></div>
+    <div class="kpi orange"><b>${st.strikes}</b><span>Strikes on them</span></div>
+    <div class="kpi blue"><b>${st.extra}</b><span>Allowed anyway</span></div></div>`;
+  h += `<div class="section"><h2>Classes</h2>${cls.length ? `<div class="chips wrap">${cls.map(c => `<button class="chip" data-act="open" data-type="class" data-id="${esc(c.id)}">${esc(c.name)}</button>`).join('')}</div>` : '<div class="note">No classes assigned.</div>'}</div>`;
+  h += `<div class="section"><h2>Recent trips they sent</h2>` + (rows.length ? rows.slice(0, 25).map(r => `<div class="log tap" role="button" tabindex="0" data-act="open" data-type="student" data-cid="${esc(r.cid)}" data-name="${esc(r.student)}"><div class="l"><div class="who">${esc(r.student)}</div><div class="meta">${esc(r.cls)}, ${shortDate(r.out)} ${tm(r.out)}</div><div>${tags(r)}</div></div><div class="r"><div class="who">${r.in ? durText(r.in - r.out) : '…'}</div><span class="chev">›</span></div></div>`).join('') : `<div class="empty">No trips in the last 30 days.</div>`) + `</div>`;
+  return {title:t.name, sub:'Teacher', body:h};
+}
+
+/* ---------- admin: classes and limits ---------- */
+function classesResults(q){
+  const cs = S.classes.filter(c => match(q, c.name));
+  const ts = S.teachers.filter(t => match(q, t.name));
+  let h = `<div class="section" style="margin-top:0"><h2>Classes</h2>`;
+  h += cs.length ? cs.map(c => {
+    const tn = teachersOf(c.id).map(t => t.name).join(', ');
+    return `<div class="card">
+      <div class="inline" style="margin-top:0"><input id="rn-${esc(c.id)}" value="${esc(c.name)}" aria-label="Class name"><button class="btn small ghost" data-act="rename" data-kind="class" data-id="${esc(c.id)}">Rename</button></div>
+      <div class="note" style="margin-top:8px">${esc(tn || 'No teachers assigned')}, ${plural(rosterOf(c).length, 'student')}</div>
+      <div class="inline"><button class="btn small" data-act="open" data-type="class" data-id="${esc(c.id)}">Open</button><button class="btn small ghost" data-act="editclass" data-id="${esc(c.id)}">Students</button>
+      <button class="btn small ${S.pending === c.id ? 'danger' : 'ghost'}" data-act="delclass" data-id="${esc(c.id)}">${S.pending === c.id ? 'Tap again to delete' : 'Delete'}</button></div></div>`;
+  }).join('') : `<div class="empty">${q ? `No class matches "${esc(q)}".` : 'No classes yet.'}</div>`;
+  h += `</div><div class="section"><h2>Teachers</h2>`;
+  h += ts.length ? ts.map(t => `<div class="card">
+      <div class="inline" style="margin-top:0"><input id="rn-${esc(t.id)}" value="${esc(t.name)}" aria-label="Teacher name"><button class="btn small ghost" data-act="rename" data-kind="teacher" data-id="${esc(t.id)}">Rename</button></div>
+      <div class="note" style="margin-top:8px">${t.pin ? 'Has a PIN' : 'No PIN'}</div>
+      <div class="note" style="margin:12px 0 8px">Can open these classes:</div>
+      ${S.classes.length ? `<div class="chips wrap">${S.classes.map(c => `<button class="chip ${t.classIds.includes(c.id) ? 'on' : ''}" aria-pressed="${t.classIds.includes(c.id)}" data-act="toggleassign" data-t="${esc(t.id)}" data-c="${esc(c.id)}">${esc(c.name)}</button>`).join('')}</div>` : `<div class="note">Add classes first.</div>`}
+      <div class="inline"><input id="tp-${esc(t.id)}" type="password" inputmode="numeric" maxlength="8" placeholder="New PIN, or empty to remove" aria-label="PIN for ${esc(t.name)}">
+      <button class="btn small ghost" data-act="settpin" data-id="${esc(t.id)}">Save PIN</button></div>
+      <div class="inline"><button class="btn small" data-act="open" data-type="teacher" data-id="${esc(t.id)}">Open</button>
+      <button class="btn small ${S.pending === t.id ? 'danger' : 'ghost'}" data-act="delteacher" data-id="${esc(t.id)}">${S.pending === t.id ? 'Tap again to delete' : 'Delete teacher'}</button></div></div>`).join('') : `<div class="empty">${q ? `No teacher matches "${esc(q)}".` : 'No teachers yet.'}</div>`;
+  return h + `</div>`;
+}
+function adminClasses(){
+  if (S.editClass) {
+    const c = S.classes.find(x => x.id === S.editClass);
+    if (c) return rosterEditor(c, true);
+    S.editClass = null;
+  }
+  let h = '';
+  if (!S.classes.length && !S.teachers.length) {
+    h += `<div class="card"><div class="name">Quick start</div>
+      <p class="note" style="margin:6px 0 12px">Loads three example classes (Class A, B and C) and three example teachers. Each teacher gets two of the classes, and every class is shared by two teachers. You can rename or delete anything afterwards.</p>
+      <button class="btn" data-act="quickstart">Load example setup</button></div>`;
+  }
+  if (S.classes.length + S.teachers.length > 3) h += searchBox('classes', 'Search classes or teachers');
+  h += `<div id="results">${classesResults((S.q.classes || '').trim())}</div>`;
+  h += `<div class="section"><label for="newClass">Add a class</label><input id="newClass" placeholder="Class name">
+    <div style="margin-top:12px"><button class="btn ghost" data-act="createclass">Add class</button></div></div>
+    <div class="section"><label for="newTeacherName">Add a teacher</label><input id="newTeacherName" placeholder="Teacher name">
+    <input id="newTeacherPin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN (optional, 4 to 8 digits)" style="margin-top:8px" aria-label="Teacher PIN">
+    <div style="margin-top:12px"><button class="btn ghost" data-act="createteacher">Add teacher</button></div></div>`;
+  return h;
+}
+
+function numField(key){
+  const f = FIELDS[key], cur = S.settings[key];
+  const preset = f.presets.includes(cur), open = !!S.customOpen[key] || !preset;
+  const customLabel = !preset ? 'Custom: ' + f.fmt(cur) : 'Custom…';
+  return `<label for="${key}">${f.label}</label>
+    <select id="${key}" data-chg="${key}">${f.presets.map(n => `<option value="${n}" ${!open && n === cur ? 'selected' : ''}>${esc(f.fmt(n))}</option>`).join('')}<option value="custom" ${open ? 'selected' : ''}>${esc(customLabel)}</option></select>` +
+    (open ? `<div class="inline"><input id="cv-${key}" type="number" inputmode="decimal" step="${f.int ? 1 : 'any'}" min="${f.min}" max="${f.max}" value="${preset ? '' : cur}" placeholder="Number of ${f.unit}" aria-label="Custom value, ${f.unit}"><button class="btn small" data-act="setcustom" data-key="${key}">Set</button></div>` : '');
+}
+function adminLimits(){
+  const s = S.settings;
+  return `<div class="section" style="margin-top:0"><h2>Trip limits</h2>
+    ${numField('maxMin')}${numField('maxTrips')}
+    <p class="note" style="margin-top:8px">If a teacher uses Allow anyway after a student has used all their trips for the day, that trip counts as a strike.</p></div>
+    <div class="section"><h2>How many can be out at once</h2>
+    <p class="note" style="margin-bottom:10px">This is counted separately for each class.</p>
+    <div class="seg two" role="group" aria-label="Out-at-once rule">
+      <button class="${s.outMode === 'total' ? 'on' : ''}" aria-pressed="${s.outMode === 'total'}" data-act="setmode" data-mode="total">Any students</button>
+      <button class="${s.outMode === 'gender' ? 'on' : ''}" aria-pressed="${s.outMode === 'gender'}" data-act="setmode" data-mode="gender">Boys and girls</button></div>
+    ${s.outMode === 'total'
+      ? `<p class="note" style="margin-top:8px">A set number of students can be out at once, boys or girls.</p>${numField('maxOut')}`
+      : `<p class="note" style="margin-top:8px">Boys and girls are counted separately. With 1 and 1, one boy and one girl can be out at the same time. For only one student at all, use Any students with a limit of 1.</p>${numField('maxBoys')}${numField('maxGirls')}`}</div>
+    <div class="section"><h2>Strikes and warnings</h2>
+    <p class="note">A trip longer than the allowed time is a strike. When a student reaches the strike limit they get a warning, and their strikes start again from 0.</p>
+    ${numField('strikeLimit')}${numField('resetDays')}
+    <p class="note" style="margin-top:8px">Counting started ${shortDate(periodStart())}. Next reset: ${shortDate(nextReset())}.</p>
+    <div style="margin-top:12px"><button class="btn ${S.pending === 'reset' ? 'danger' : 'ghost'}" data-act="resetnow">${S.pending === 'reset' ? 'Tap again to reset every strike and warning' : 'Reset all strikes and warnings now'}</button></div></div>
+    <div class="section"><h2>Admin PIN</h2>
+    <input id="newPin" type="password" inputmode="numeric" maxlength="8" placeholder="New PIN (4 to 8 digits)" aria-label="New PIN">
+    <div style="margin-top:12px"><button class="btn ghost" data-act="changepin">Change PIN</button></div></div>`;
+}
+
+/* ---------- csv (simple fallback) ---------- */
+function csvText(){
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const line = (...a) => a.map(q).join(',');
+  const dt = ts => new Date(ts).toLocaleString();
+  const s = S.settings, L = [];
+  L.push(line('Hall Pass export')); L.push(line('Exported', dt(Date.now()))); L.push(line('Trips shown', RANGE_LABEL[S.range])); L.push('');
+  L.push(line('CURRENT LIMITS')); L.push(line('Setting', 'Value'));
+  LIMITS.forEach(([k, label]) => L.push(line(label, limitVal(k, s[k]))));
+  L.push(line('Counting period started', new Date(periodStart()).toLocaleDateString()));
+  L.push(line('Next reset', new Date(nextReset()).toLocaleDateString())); L.push('');
+  L.push(line('LIMIT CHANGES (old limits and new limits)'));
+  if (!S.limitsLog.length) L.push(line('No limits have been changed since the app was set up.'));
+  S.limitsLog.forEach(e => {
+    if (e.type === 'reset') { L.push(line('All strikes and warnings were reset manually on', dt(e.ts))); L.push(''); return; }
+    const lab = (LIMITS.find(x => x[0] === e.key) || [e.key, e.key])[1];
+    L.push(line('Changed on', dt(e.ts), 'What changed', lab));
+    L.push(line('Setting', 'Old limits', 'New limits', 'Changed'));
+    LIMITS.forEach(([k, label]) => L.push(line(label, limitVal(k, e.old[k]), limitVal(k, e.nw[k]), e.old[k] !== e.nw[k] ? 'Yes' : '')));
+    L.push('');
+  });
+  const rows = rangeRows().slice().sort((a, b) => a.out - b.out);
+  L.push(line('TRIPS'));
+  L.push(line('Class', 'Student', 'Gender', 'Sent by', 'Date', 'Out', 'In', 'Minutes', 'Time limit then (minutes)', 'Strikes', 'Strike reason', 'Warning given', 'Allowed anyway', 'Why it was allowed'));
+  const why = {daily:'Daily trip limit', out:'Out-at-once limit'};
+  rows.forEach(r => L.push([
+    q(r.cls), q(r.student), q(genderLabel(r.g)), q(r.by || ''),
+    q(new Date(r.out).toLocaleDateString()), q(tm(r.out)), q(r.in ? tm(r.in) : ''),
+    r.in ? ((r.in - r.out) / 60000).toFixed(1) : '', q(r.lim != null ? r.lim : ''),
+    evs(r).length || '', q(evs(r).map(e => KIND_LONG[e.k]).join(' and ')), q(evs(r).some(e => e.w) ? 'Yes' : ''),
+    q(r.extra && r.extra.length ? 'Yes' : ''), q((r.extra || []).map(x => why[x] || x).join(' and '))
+  ].join(',')));
+  return L.join('\n');
+}
+
+/* ---------- xlsx writer (no libraries) ----------
+   Builds a real .xlsx file with colors, frozen headers, filters and native Excel charts. */
+const X = (() => {
+  const enc = new TextEncoder();
+  const xe = s => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const col = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+  const ref = (c, r) => col(c) + (r + 1);
+  const concat = chunks => { let n = 0; chunks.forEach(c => n += c.length); const o = new Uint8Array(n); let p = 0; chunks.forEach(c => { o.set(c, p); p += c.length; }); return o; };
+  let T;
+  function crc(b){
+    if (!T) { T = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; T[n] = c >>> 0; } }
+    let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = T[(c ^ b[i]) & 255] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function zip(files){
+    const chunks = [], central = []; let offset = 0;
+    files.forEach(f => {
+      const nameB = enc.encode(f.name), data = typeof f.data === 'string' ? enc.encode(f.data) : f.data, c = crc(data), size = data.length;
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+      lh.setUint16(10, 0, true); lh.setUint16(12, 0x21, true); lh.setUint32(14, c, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true);
+      lh.setUint16(26, nameB.length, true); lh.setUint16(28, 0, true);
+      chunks.push(new Uint8Array(lh.buffer), nameB, data);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+      ch.setUint16(12, 0, true); ch.setUint16(14, 0x21, true); ch.setUint32(16, c, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true);
+      ch.setUint16(28, nameB.length, true); ch.setUint16(30, 0, true); ch.setUint16(32, 0, true); ch.setUint16(34, 0, true); ch.setUint16(36, 0, true);
+      ch.setUint32(38, 0, true); ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), nameB);
+      offset += 30 + nameB.length + size;
+    });
+    const cd = concat(central);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(4, 0, true); end.setUint16(6, 0, true);
+    end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, cd.length, true); end.setUint32(16, offset, true); end.setUint16(20, 0, true);
+    return concat(chunks.concat([cd, new Uint8Array(end.buffer)]));
+  }
+
+  function Styles(){
+    const fonts = [], fills = [], borders = [], fmts = [], xfs = [];
+    const maps = {font:{}, fill:{}, border:{}, fmt:{}, xf:{}};
+    const add = (list, map, x) => { if (map[x] == null) { map[x] = list.length; list.push(x); } return map[x]; };
+    add(fonts, maps.font, '<font><sz val="11"/><color rgb="FF1F2937"/><name val="Calibri"/><family val="2"/></font>');
+    add(fills, maps.fill, '<fill><patternFill patternType="none"/></fill>');
+    add(fills, maps.fill, '<fill><patternFill patternType="gray125"/></fill>');
+    add(borders, maps.border, '<border><left/><right/><top/><bottom/><diagonal/></border>');
+    xfs.push('<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>');
+    const get = st => {
+      if (!st) return 0;
+      const key = JSON.stringify(st);
+      if (maps.xf[key] != null) return maps.xf[key];
+      const f = add(fonts, maps.font, `<font>${st.b ? '<b/>' : ''}${st.i ? '<i/>' : ''}<sz val="${st.sz || 11}"/><color rgb="FF${st.c || '1F2937'}"/><name val="Calibri"/><family val="2"/></font>`);
+      const fl = st.bg ? add(fills, maps.fill, `<fill><patternFill patternType="solid"><fgColor rgb="FF${st.bg}"/><bgColor indexed="64"/></patternFill></fill>`) : 0;
+      const bd = st.bd ? add(borders, maps.border, `<border>${['left','right','top','bottom'].map(x => `<${x} style="thin"><color rgb="FF${st.bd}"/></${x}>`).join('')}<diagonal/></border>`) : 0;
+      const nf = st.fmt ? 164 + add(fmts, maps.fmt, st.fmt) : 0;
+      const al = (st.h || st.v || st.w) ? `<alignment${st.h ? ` horizontal="${st.h}"` : ''} vertical="${st.v || 'center'}"${st.w ? ' wrapText="1"' : ''}/>` : '';
+      xfs.push(`<xf numFmtId="${nf}" fontId="${f}" fillId="${fl}" borderId="${bd}" xfId="0" applyFont="1"${fl ? ' applyFill="1"' : ''}${bd ? ' applyBorder="1"' : ''}${nf ? ' applyNumberFormat="1"' : ''}${al ? ' applyAlignment="1">' + al + '</xf>' : '/>'}`);
+      return (maps.xf[key] = xfs.length - 1);
+    };
+    const xml = () => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+      (fmts.length ? `<numFmts count="${fmts.length}">${fmts.map((f, i) => `<numFmt numFmtId="${164 + i}" formatCode="${xe(f)}"/>`).join('')}</numFmts>` : '') +
+      `<fonts count="${fonts.length}">${fonts.join('')}</fonts><fills count="${fills.length}">${fills.join('')}</fills><borders count="${borders.length}">${borders.join('')}</borders>` +
+      `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs>` +
+      `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+    return {get, xml};
+  }
+
+  const NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+  const cellVal = c => (c && typeof c === 'object' && !Array.isArray(c)) ? c.v : c;
+
+  function chartXml(ch, sn, rows){
+    const q = `'${sn.replace(/'/g, "''")}'`;
+    const rng = (c, r1, r2) => `${q}!$${col(c)}$${r1 + 1}:$${col(c)}$${r2 + 1}`;
+    const n = ch.r2 - ch.r1 + 1;
+    const cats = []; for (let r = ch.r1; r <= ch.r2; r++) cats.push(cellVal((rows[r] || [])[ch.cc]));
+    const catPts = cats.map((v, i) => `<c:pt idx="${i}"><c:v>${xe(v)}</c:v></c:pt>`).join('');
+    const ser = ch.series.map((s, i) => {
+      const vals = []; for (let r = ch.r1; r <= ch.r2; r++) vals.push(Number(cellVal((rows[r] || [])[s.c])) || 0);
+      return `<c:ser><c:idx val="${i}"/><c:order val="${i}"/><c:tx><c:strRef><c:f>${q}!$${col(s.c)}$${ch.r1}</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>${xe(s.name)}</c:v></c:pt></c:strCache></c:strRef></c:tx>` +
+        `<c:spPr><a:solidFill><a:srgbClr val="${s.color}"/></a:solidFill></c:spPr><c:invertIfNegative val="0"/>` +
+        (ch.labels ? `<c:dLbls><c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr><c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>` : '') +
+        `<c:cat><c:strRef><c:f>${rng(ch.cc, ch.r1, ch.r2)}</c:f><c:strCache><c:ptCount val="${n}"/>${catPts}</c:strCache></c:strRef></c:cat>` +
+        `<c:val><c:numRef><c:f>${rng(s.c, ch.r1, ch.r2)}</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="${n}"/>${vals.map((v, k) => `<c:pt idx="${k}"><c:v>${v}</c:v></c:pt>`).join('')}</c:numCache></c:numRef></c:val></c:ser>`;
+    }).join('');
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><c:roundedCorners val="0"/>` +
+      `<c:chart><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1300" b="1"/></a:pPr><a:r><a:rPr lang="en-US" sz="1300" b="1"/><a:t>${xe(ch.title)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/>` +
+      `<c:plotArea><c:layout/><c:barChart><c:barDir val="col"/><c:grouping val="clustered"/><c:varyColors val="0"/>${ser}<c:gapWidth val="60"/><c:axId val="111111"/><c:axId val="222222"/></c:barChart>` +
+      `<c:catAx><c:axId val="111111"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:numFmt formatCode="General" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="222222"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/><c:noMultiLvlLbl val="0"/></c:catAx>` +
+      `<c:valAx><c:axId val="222222"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="D2DAE3"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:numFmt formatCode="General" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="111111"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx></c:plotArea>` +
+      (ch.series.length > 1 ? `<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>` : '') +
+      `<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart></c:chartSpace>`;
+  }
+
+  function build(sheets){
+    const st = Styles(), files = [];
+    let chartNo = 0, drawNo = 0;
+    const ct = [], wbSheets = [], wbRels = [];
+    sheets.forEach((sh, si) => {
+      const n = si + 1, rows = sh.rows;
+      let sd = '';
+      rows.forEach((row, r) => {
+        const h = sh.heights && sh.heights[r];
+        let cells = '';
+        (row || []).forEach((cell, c) => {
+          const isObj = cell && typeof cell === 'object' && !Array.isArray(cell);
+          const v = isObj ? cell.v : cell, sid = isObj && cell.s ? st.get(cell.s) : 0;
+          const a = ref(c, r), sa = sid ? ` s="${sid}"` : '';
+          if (v == null || v === '') { if (sid) cells += `<c r="${a}"${sa}/>`; }
+          else if (typeof v === 'number' && isFinite(v)) cells += `<c r="${a}"${sa}><v>${v}</v></c>`;
+          else cells += `<c r="${a}"${sa} t="inlineStr"><is><t xml:space="preserve">${xe(v)}</t></is></c>`;
+        });
+        if (cells || h) sd += `<row r="${r + 1}"${h ? ` ht="${h}" customHeight="1"` : ''}>${cells}</row>`;
+      });
+      const hasCharts = sh.charts && sh.charts.length;
+      const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet ${NS}>` +
+        `<sheetPr>${sh.tab ? `<tabColor rgb="FF${sh.tab}"/>` : ''}</sheetPr>` +
+        `<sheetViews><sheetView workbookViewId="0"${sh.grid === false ? ' showGridLines="0"' : ''}${si === 0 ? ' tabSelected="1"' : ''}>${sh.freeze ? `<pane ySplit="${sh.freeze}" topLeftCell="A${sh.freeze + 1}" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/>` : ''}</sheetView></sheetViews>` +
+        `<sheetFormatPr defaultRowHeight="15"/>` +
+        (sh.cols ? `<cols>${sh.cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols>` : '') +
+        `<sheetData>${sd}</sheetData>` +
+        (sh.filter ? `<autoFilter ref="${sh.filter}"/>` : '') +
+        (sh.merges && sh.merges.length ? `<mergeCells count="${sh.merges.length}">${sh.merges.map(m => `<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : '') +
+        `<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>` +
+        (hasCharts ? `<drawing r:id="rId1"/>` : '') + `</worksheet>`;
+      files.push({name:`xl/worksheets/sheet${n}.xml`, data:xml});
+      ct.push(`<Override PartName="/xl/worksheets/sheet${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`);
+      wbSheets.push(`<sheet name="${xe(sh.name)}" sheetId="${n}" r:id="rId${n}"/>`);
+      wbRels.push(`<Relationship Id="rId${n}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${n}.xml"/>`);
+      if (hasCharts) {
+        drawNo++;
+        files.push({name:`xl/worksheets/_rels/sheet${n}.xml.rels`, data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing${drawNo}.xml"/></Relationships>`});
+        let anchors = '', drels = '';
+        sh.charts.forEach((ch, k) => {
+          chartNo++;
+          files.push({name:`xl/charts/chart${chartNo}.xml`, data:chartXml(ch, sh.name, rows)});
+          ct.push(`<Override PartName="/xl/charts/chart${chartNo}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>`);
+          drels += `<Relationship Id="rId${k + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart${chartNo}.xml"/>`;
+          anchors += `<xdr:twoCellAnchor><xdr:from><xdr:col>${ch.from.c}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${ch.from.r}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>${ch.to.c}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${ch.to.r}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>` +
+            `<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="${k + 2}" name="Chart ${k + 1}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rId${k + 1}"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>`;
+        });
+        files.push({name:`xl/drawings/drawing${drawNo}.xml`, data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${anchors}</xdr:wsDr>`});
+        files.push({name:`xl/drawings/_rels/drawing${drawNo}.xml.rels`, data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${drels}</Relationships>`});
+        ct.push(`<Override PartName="/xl/drawings/drawing${drawNo}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>`);
+      }
+    });
+    const sn = sheets.length + 1;
+    wbRels.push(`<Relationship Id="rId${sn}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`);
+    files.unshift(
+      {name:'[Content_Types].xml', data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${ct.join('')}</Types>`},
+      {name:'_rels/.rels', data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+      {name:'xl/workbook.xml', data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook ${NS}><bookViews><workbookView activeTab="0"/></bookViews><sheets>${wbSheets.join('')}</sheets></workbook>`},
+      {name:'xl/_rels/workbook.xml.rels', data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${wbRels.join('')}</Relationships>`},
+      {name:'xl/styles.xml', data:st.xml()}
+    );
+    return zip(files);
+  }
+  return {build, zip};
+})();
+
+function buildReportSheets(){
+  const s = S.settings, rows = rangeRows(), st = stats(rows);
+  const C = {navy:'14213D', teal:'0F766E', tealL:'D9F0EC', blue:'1D4ED8', blueL:'DCE9FB', orange:'C2410C', orangeL:'FDE3D3', red:'991B1B', redL:'F6C9C9', amber:'7A5200', amberL:'FFE8B8', grayL:'EDF1F4', line:'D2DAE3', muted:'5B6678'};
+  const K = {
+    title:{b:1, sz:18, c:'FFFFFF', bg:C.navy, v:'center'},
+    sub:{i:1, c:C.muted},
+    sec:{b:1, sz:13, c:C.teal},
+    head:{b:1, c:'FFFFFF', bg:C.teal, bd:C.line, h:'center', v:'center', w:1},
+    headL:{b:1, c:'FFFFFF', bg:C.teal, bd:C.line, v:'center', w:1},
+    txt:{bd:C.line, v:'center'},
+    ctr:{bd:C.line, h:'center', v:'center'},
+    dec:{bd:C.line, h:'center', v:'center', fmt:'0.0'},
+    strike:{bd:C.line, h:'center', v:'center', b:1, c:C.orange, bg:C.orangeL},
+    warn:{bd:C.line, h:'center', v:'center', b:1, c:C.red, bg:C.redL},
+    amber:{bd:C.line, h:'center', v:'center', b:1, c:C.amber, bg:C.amberL},
+    dim:{bd:C.line, h:'center', v:'center', c:'9AA7BC'},
+    band:{b:1, c:C.navy, bg:C.grayL, bd:C.line, v:'center'}
+  };
+  const kpi = (c, l, sz) => ({lab:{b:1, c, bg:l, h:'center', v:'center'}, val:{b:1, sz:sz || 22, c, bg:l, h:'center', v:'center'}});
+  const rd = ms => Math.round(ms / 6000) / 10;
+  const dstr = ts => new Date(ts).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+  const bg = (o, bgc) => bgc ? Object.assign({}, o, {bg:bgc}) : o;
+  const sheets = [];
+
+  /* Summary */
+  const byClass = S.classes.map(c => { const rr = rows.filter(r => r.cid === c.id), x = stats(rr); return {name:c.name, n:rr.length, avg:rd(x.avg), s:x.strikes, w:x.warns}; }).sort((a, b) => b.n - a.n);
+  const days = S.range === 'today' || S.range === '7' ? 7 : 30;
+  const buckets = dayBuckets(allRows(), days);
+  const k1 = kpi(C.teal, C.tealL), k2 = kpi(C.blue, C.blueL), k3 = kpi(C.orange, C.orangeL), k4 = kpi(C.red, C.redL), k5 = kpi(C.amber, C.amberL);
+  const sum = [];
+  sum[0] = [{v:'Hall Pass report', s:K.title}, {v:'', s:K.title}, {v:'', s:K.title}, {v:'', s:K.title}, {v:'', s:K.title}];
+  sum[1] = [{v:`${RANGE_LABEL[S.range]}. Exported ${new Date().toLocaleString()}.`, s:K.sub}];
+  sum[3] = [{v:'Trips', s:k1.lab}, {v:'Average trip (min)', s:k2.lab}, {v:'Strikes', s:k3.lab}, {v:'Warnings', s:k4.lab}, {v:'Allowed anyway', s:k5.lab}];
+  sum[4] = [{v:st.n, s:k1.val}, {v:rd(st.avg), s:Object.assign({}, k2.val, {fmt:'0.0'})}, {v:st.strikes, s:k3.val}, {v:st.warns, s:k4.val}, {v:st.extra, s:k5.val}];
+  sum[6] = [{v:'Trips by class', s:K.sec}];
+  sum[7] = [{v:'Class', s:K.headL}, {v:'Trips', s:K.head}, {v:'Average (min)', s:K.head}, {v:'Strikes', s:K.head}, {v:'Warnings', s:K.head}];
+  const cr1 = 8;
+  byClass.forEach((x, i) => { sum[cr1 + i] = [{v:x.name, s:K.txt}, {v:x.n, s:K.ctr}, {v:x.avg || '', s:K.dec}, {v:x.s, s:x.s ? K.strike : K.ctr}, {v:x.w, s:x.w ? K.warn : K.ctr}]; });
+  const dh = cr1 + byClass.length + 1;
+  sum[dh] = [{v:`Trips per day (last ${days} days)`, s:K.sec}];
+  sum[dh + 1] = [{v:'Day', s:K.headL}, {v:'Trips', s:K.head}, {v:'Trips with a strike', s:K.head}];
+  const dr1 = dh + 2;
+  buckets.forEach((b, i) => { sum[dr1 + i] = [{v:b.full, s:K.txt}, {v:b.n, s:K.ctr}, {v:b.s, s:b.s ? K.strike : K.ctr}]; });
+  const charts = [];
+  if (byClass.length) {
+    charts.push({title:'Trips by class', cc:0, r1:cr1, r2:cr1 + byClass.length - 1, series:[{name:'Trips', c:1, color:C.teal}], labels:true, from:{c:6, r:2}, to:{c:15, r:19}});
+    charts.push({title:'Strikes and warnings by class', cc:0, r1:cr1, r2:cr1 + byClass.length - 1, series:[{name:'Strikes', c:3, color:'F59E0B'}, {name:'Warnings', c:4, color:'DC2626'}], labels:true, from:{c:6, r:38}, to:{c:15, r:55}});
+  }
+  charts.push({title:`Trips per day (last ${days} days)`, cc:0, r1:dr1, r2:dr1 + buckets.length - 1, series:[{name:'Trips', c:1, color:C.teal}, {name:'Trips with a strike', c:2, color:'F59E0B'}], labels:false, from:{c:6, r:20}, to:{c:15, r:37}});
+  sheets.push({name:'Summary', tab:C.teal, grid:false, cols:[28, 16, 16, 16, 16, 3], rows:sum, heights:{0:34, 3:22, 4:40}, merges:['A1:E1', 'A2:E2'], charts});
+
+  /* Needs attention */
+  const fl = flaggedList();
+  const na = [[{v:'Student', s:K.headL}, {v:'Class', s:K.headL}, {v:'Status', s:K.head}, {v:'Strikes now', s:K.head}, {v:'Strike limit', s:K.head}, {v:'Warnings', s:K.head}, {v:'Last strike', s:K.head}]];
+  if (!fl.length) na.push([{v:'Nobody has strikes or warnings right now.', s:K.sub}]);
+  fl.forEach(f => {
+    const w = f.warns > 0;
+    na.push([{v:f.name, s:bg(K.txt, w ? C.redL : C.orangeL)}, {v:f.cls, s:bg(K.txt, w ? C.redL : C.orangeL)}, {v:w ? 'Warning given' : 'Has strikes', s:w ? K.warn : K.strike}, {v:f.strikes, s:K.ctr}, {v:s.strikeLimit, s:K.ctr}, {v:f.warns, s:w ? K.warn : K.ctr}, {v:f.last ? dstr(f.last) : '', s:K.ctr}]);
+  });
+  sheets.push({name:'Needs attention', tab:C.orange, cols:[26, 22, 18, 14, 14, 12, 16], rows:na, heights:{0:26}, freeze:1});
+
+  /* Students */
+  const stu = [[{v:'Student', s:K.headL}, {v:'Class', s:K.headL}, {v:'Gender', s:K.head}, {v:'Trips', s:K.head}, {v:'Average (min)', s:K.head}, {v:'Longest (min)', s:K.head}, {v:'Strikes', s:K.head}, {v:'Warnings', s:K.head}, {v:'Allowed anyway', s:K.head}]];
+  S.classes.forEach(c => rosterOf(c).sort((a, b) => a.name.localeCompare(b.name)).forEach(x => {
+    const rr = rows.filter(r => r.cid === c.id && r.student === x.name), z = stats(rr);
+    stu.push([{v:x.name, s:K.txt}, {v:c.name, s:K.txt}, {v:genderLabel(x.gender), s:K.ctr}, {v:z.n, s:z.n ? K.ctr : K.dim}, {v:z.n ? rd(z.avg) : '', s:K.dec}, {v:z.n ? rd(z.max) : '', s:K.dec}, {v:z.strikes, s:z.strikes ? K.strike : K.dim}, {v:z.warns, s:z.warns ? K.warn : K.dim}, {v:z.extra, s:z.extra ? K.amber : K.dim}]);
+  }));
+  sheets.push({name:'Students', tab:C.blue, cols:[26, 22, 12, 10, 14, 14, 10, 11, 15], rows:stu, heights:{0:26}, freeze:1, filter:`A1:I${Math.max(2, stu.length)}`});
+
+  /* Trips */
+  const why = {daily:'Daily trip limit', out:'Out-at-once limit'};
+  const tr = [['Date', 'Class', 'Student', 'Gender', 'Sent by', 'Out', 'In', 'Minutes', 'Time limit then (min)', 'Strikes', 'Strike reason', 'Warning given', 'Allowed anyway', 'Why it was allowed'].map((h, i) => ({v:h, s:[0,1,2,4,10,13].includes(i) ? K.headL : K.head}))];
+  rows.forEach(r => {
+    const e = evs(r), warnRow = e.some(x => x.w), tint = warnRow ? C.redL : e.length ? C.orangeL : null;
+    const T = bg(K.txt, tint), Cc = bg(K.ctr, tint), D = bg(K.dec, tint);
+    tr.push([{v:dstr(r.out), s:T}, {v:r.cls, s:T}, {v:r.student, s:T}, {v:genderLabel(r.g), s:Cc}, {v:r.by || '', s:T}, {v:tm(r.out), s:Cc}, {v:r.in ? tm(r.in) : 'Still out', s:Cc},
+      {v:r.in ? rd(r.in - r.out) : '', s:D}, {v:r.lim != null ? r.lim : '', s:Cc}, {v:e.length || '', s:e.length ? K.strike : Cc}, {v:e.map(x => KIND_LONG[x.k]).join(' and '), s:T},
+      {v:warnRow ? 'Yes' : '', s:warnRow ? K.warn : Cc}, {v:r.extra && r.extra.length ? 'Yes' : '', s:r.extra && r.extra.length ? K.amber : Cc}, {v:(r.extra || []).map(x => why[x] || x).join(' and '), s:T}]);
+  });
+  sheets.push({name:'Trips', tab:C.navy, cols:[16, 18, 22, 10, 18, 11, 11, 10, 14, 9, 28, 12, 14, 22], rows:tr, heights:{0:34}, freeze:1, filter:`A1:N${Math.max(2, tr.length)}`});
+
+  /* Limits */
+  const li = [[{v:'Limits set by the admin', s:K.title}, {v:'', s:K.title}, {v:'', s:K.title}, {v:'', s:K.title}]];
+  li.push([{v:'Setting', s:K.headL}, {v:'Current value', s:K.headL}]);
+  LIMITS.forEach(([k, label]) => li.push([{v:label, s:K.txt}, {v:limitVal(k, s[k]), s:K.txt}]));
+  li.push([{v:'Counting period started', s:K.txt}, {v:dstr(periodStart()), s:K.txt}]);
+  li.push([{v:'Next reset', s:K.txt}, {v:dstr(nextReset()), s:K.txt}]);
+  li.push([]); li.push([{v:'Changes to the limits (old limits and new limits)', s:K.sec}]);
+  if (!S.limitsLog.length) li.push([{v:'No limits have been changed since the app was set up.', s:K.sub}]);
+  S.limitsLog.forEach(e => {
+    li.push([]);
+    if (e.type === 'reset') { li.push([{v:`All strikes and warnings were reset manually on ${new Date(e.ts).toLocaleString()}`, s:K.band}, {v:'', s:K.band}, {v:'', s:K.band}, {v:'', s:K.band}]); return; }
+    const lab = (LIMITS.find(x => x[0] === e.key) || [e.key, e.key])[1];
+    li.push([{v:`Changed on ${new Date(e.ts).toLocaleString()}: ${lab}`, s:K.band}, {v:'', s:K.band}, {v:'', s:K.band}, {v:'', s:K.band}]);
+    li.push([{v:'Setting', s:K.headL}, {v:'Old limits', s:K.headL}, {v:'New limits', s:K.headL}, {v:'Changed', s:K.head}]);
+    LIMITS.forEach(([k, label]) => { const ch = e.old[k] !== e.nw[k], t = ch ? C.amberL : null; li.push([{v:label, s:bg(K.txt, t)}, {v:limitVal(k, e.old[k]), s:bg(K.txt, t)}, {v:limitVal(k, e.nw[k]), s:bg(K.txt, t)}, {v:ch ? 'Yes' : '', s:ch ? K.amber : K.ctr}]); });
+  });
+  sheets.push({name:'Limits', tab:'F59E0B', grid:false, cols:[44, 36, 36, 12], rows:li, heights:{0:34}, merges:['A1:D1']});
+  return sheets;
+}
+const buildXlsxBytes = () => X.build(buildReportSheets());
+
+/* ---------- actions ---------- */
+const validPin = p => /^\d{4,8}$/.test(p);
+async function addToIndex(key, id){
+  const idx = (await store.get(key, true)) || [];
+  if (!idx.includes(id)) idx.push(id);
+  await store.set(key, idx, true);
+}
+async function mutateClass(cid, fn){
+  const c = await store.get('class:' + cid, true);
+  if (!c) { toast('That class no longer exists.'); return null; }
+  c.roster = rosterOf(c);
+  fn(c);
+  await store.set('class:' + cid, c, true);
+  await loadClasses();
+  if (S.cls) S.cls = S.classes.find(x => x.id === S.cls.id) || S.cls;
+  return c;
+}
+const editCid = () => S.editClass || (S.cls && S.cls.id);
+function download(name, blob){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+}
+
+const H = {
+  async role(d){
+    S.device = {role: d.role};
+    S.tab = d.role === 'admin' ? 'live' : 'roster';
+    await store.set('device', S.device, false);
+    await Promise.all([loadSettings(), loadTeachers(), loadClasses()]);
+    render();
+  },
+  async savecode(){
+    const c = val('code');
+    if (!/^[\x21-\x7E]{6,}$/.test(c)) return toast('Type the code exactly as you were given it.');
+    ls.set('hp:code', c);
+    try { await cloud('?on_conflict=key', Object.assign({}, UPSERT, {body:JSON.stringify({key:'_ping', value:{ts:Date.now()}})})); }
+    catch (e) {
+      if (e.message === 'auth') { ls.del('hp:code'); return toast('That code is not right.'); }
+      return toast('Could not reach the database. Check your internet.');
+    }
+    S.needCode = false; await start();
+  },
+  async retry(){ await start(); },
+  async logout(){
+    S.device = null; S.me = null; S.cls = null; S.unlocked = false; S.pending = null; S.loginTeacher = null; S.confirm = null; S.editClass = null; S.nav = []; S.q = {};
+    await store.set('device', null, false);
+    render();
+  },
+  async refresh(){ await refreshMine(); render(); },
+
+  /* teacher sign-in */
+  async pickteacher(d){
+    const t = S.teachers.find(x => x.id === d.id); if (!t) return;
+    if (t.pin) { S.loginTeacher = t.id; return render(); }
+    await H.login(t);
+  },
+  async checktpin(){
+    const t = S.teachers.find(x => x.id === S.loginTeacher); if (!t) return;
+    if (val('tpin') !== t.pin) return toast('That PIN is not right.');
+    S.loginTeacher = null; await H.login(t);
+  },
+  cancelpick(){ S.loginTeacher = null; render(); },
+  async login(t){
+    S.device = {role:'teacher', teacherId:t.id};
+    await store.set('device', S.device, false);
+    S.tab = 'roster'; S.cls = null; await refreshMine(); render();
+  },
+  setclass(d){
+    const c = S.classes.find(x => x.id === d.id); if (!c) return;
+    S.cls = c; S.pending = null; S.confirm = null; S.q.roster = ''; render();
+    loadLog(c.id).then(l => { S.logs[c.id] = l; if (S.cls && S.cls.id === c.id && !typing()) render(); }).catch(() => {});
+  },
+
+  /* sending students to the bathroom */
+  async out(d){
+    if (S.busy) return; S.busy = true;
+    try {
+      const cid = S.cls.id;
+      await loadSettings();
+      const s = S.settings;
+      const cur = await loadLog(cid);
+      S.logs[cid] = cur;
+      if (cur.some(r => !r.in && r.student === d.name)) { render(); return; }
+      const st = rosterOf(S.cls).find(x => x.name === d.name);
+      const g = st ? st.gender : '';
+      if (s.outMode === 'gender' && !g) { render(); return toast(`Choose Boy or Girl for ${d.name} in the Students tab first.`); }
+      const reasons = [];
+      const info = infoMap(cur)[d.name] || {today:0};
+      if (info.today >= s.maxTrips) reasons.push({k:'daily', t:`${d.name} has already had ${info.today} of ${s.maxTrips} trips today.`});
+      const lt = outLimitText(cur, g);
+      if (lt) reasons.push({k:'out', t:lt});
+      if (reasons.length && !d.force) { S.confirm = {name:d.name, reasons}; render(); return; }
+      const rec = {id:uid(), student:d.name, g, out:Date.now(), in:null, by:S.me.name, bid:S.me.id};
+      let ev = null;
+      if (reasons.length) {
+        rec.extra = reasons.map(x => x.k);
+        if (rec.extra.includes('daily')) ev = addStrike(cur, rec, 'daily', s);
+      }
+      cur.push(rec);
+      await store.set('log:' + cid, cur, true);
+      S.confirm = null; render();
+      if (ev) toast(`${d.name} was allowed anyway. That is strike ${ev.n} of ${ev.sl}.` + (ev.w ? ` ${d.name} now has a warning, and the strikes start again from 0.` : ''), true);
+      else if (reasons.length) toast(`${d.name} was allowed anyway. This is saved in the log.`);
+    } finally { S.busy = false; }
+  },
+  async allow(){ const c = S.confirm; if (!c) return; await H.out({name:c.name, force:true}); },
+  cancelallow(){ S.confirm = null; render(); },
+
+  async back(d){
+    if (S.busy) return; S.busy = true;
+    try {
+      const cid = S.cls.id;
+      await loadSettings();
+      const s = S.settings;
+      const cur = await loadLog(cid);
+      S.logs[cid] = cur;
+      const r = cur.find(x => x.id === d.id);
+      if (!r || r.in) { render(); return; }
+      r.in = Date.now();
+      const took = r.in - r.out, limMs = s.maxMin * 60000;
+      r.lim = s.maxMin;
+      let ev = null;
+      if (took > limMs) ev = addStrike(cur, r, 'time', s);
+      await store.set('log:' + cid, cur, true);
+      render();
+      if (ev) toast(`${r.student} was ${durText(took - limMs)} over. Strike ${ev.n} of ${ev.sl}.` + (ev.w ? ` ${r.student} now has a warning, and the strikes start again from 0.` : ''), true);
+      else toast(`${r.student} is back after ${durText(took)}.`);
+    } finally { S.busy = false; }
+  },
+  async delentry(d){
+    if (S.pending !== d.id) { S.pending = d.id; return render(); }
+    S.pending = null;
+    const cid = S.cls.id;
+    const cur = (await loadLog(cid)).filter(r => r.id !== d.id);
+    await store.set('log:' + cid, cur, true);
+    S.logs[cid] = cur; render(); toast('Trip removed.');
+  },
+  async tab(d){
+    S.tab = d.tab; S.pending = null; S.editClass = null; S.confirm = null; S.nav = []; S.q = {}; render();
+    if (S.device.role === 'admin') await refreshAll(); else await refreshMine();
+    if (S.tab === d.tab && !typing()) render();
+  },
+
+  /* admin drill-down */
+  open(d){
+    S.nav.push({t:d.type, id:d.id, cid:d.cid, name:d.name});
+    S.pending = null; S.q.class = '';
+    render();
+    if (window.scrollTo) window.scrollTo(0, 0);
+  },
+  navback(){ S.nav.pop(); S.pending = null; render(); if (window.scrollTo) window.scrollTo(0, 0); },
+
+  /* students and gender */
+  pickgender(d){ S.draft = val('names'); S.addGender = d.g; render(); },
+  async addstudents(){
+    const cid = editCid(); if (!cid) return;
+    const text = val('names');
+    if (!S.addGender) return toast('Choose Boy or Girl first.');
+    const names = text.split('\n').map(x => x.trim()).filter(Boolean);
+    if (!names.length) return toast('Type a name first.');
+    let added = 0;
+    await mutateClass(cid, c => {
+      const have = new Set(c.roster.map(x => x.name.toLowerCase()));
+      names.forEach(n => { if (!have.has(n.toLowerCase())) { have.add(n.toLowerCase()); c.roster.push({name:n, gender:S.addGender}); added++; } });
+    });
+    S.draft = ''; render();
+    toast(added ? `Added ${plural(added, genderWord(S.addGender))}.` : 'Those names are already in the class.');
+  },
+  async setgender(d){
+    await mutateClass(editCid(), c => { const x = c.roster.find(y => y.name === d.name); if (x) x.gender = d.g; });
+    S.draft = val('names'); render();
+  },
+  async rmstudent(d){
+    const key = 'rm:' + d.name;
+    if (S.pending !== key) { S.draft = val('names'); S.pending = key; return render(); }
+    S.pending = null; S.draft = val('names');
+    await mutateClass(editCid(), c => { c.roster = c.roster.filter(y => y.name !== d.name); });
+    render(); toast(`${d.name} removed.`);
+  },
+  editclass(d){ S.editClass = d.id; S.pending = null; S.draft = ''; render(); },
+  editclassfromdetail(d){ S.nav = []; S.tab = 'classes'; S.q = {}; S.editClass = d.id; S.draft = ''; render(); },
+  closeedit(){ S.editClass = null; render(); },
+
+  /* admin sign-in */
+  async unlock(){
+    await loadSettings();
+    if (val('pin') !== S.settings.pin) return toast('That PIN is not right.');
+    S.unlocked = true; S.tab = 'live'; S.nav = []; await refreshAll(); render();
+  },
+  async setpin(){
+    const p = val('pin');
+    if (!validPin(p)) return toast('Use 4 to 8 digits.');
+    await loadSettings();
+    S.settings.pin = p; await store.set('settings', S.settings, true);
+    S.unlocked = true; S.tab = 'live'; S.nav = []; await refreshAll(); render(); toast('PIN saved.');
+  },
+  async changepin(){
+    const p = val('newPin');
+    if (!validPin(p)) return toast('Use 4 to 8 digits.');
+    await loadSettings();
+    S.settings.pin = p; await store.set('settings', S.settings, true);
+    document.getElementById('newPin').value = ''; toast('PIN changed.');
+  },
+  range(d){ S.range = d.r; render(); },
+
+  /* admin: limits */
+  async setmode(d){
+    const ch = await saveSetting('outMode', d.mode);
+    render(); toast(ch ? 'Saved.' : 'Already selected.');
+  },
+  async setcustom(d){
+    const f = FIELDS[d.key], v = parseFloat(val('cv-' + d.key));
+    if (!isFinite(v) || v < f.min || v > f.max || (f.int && !Number.isInteger(v)))
+      return toast(`Enter ${f.int ? 'a whole number' : 'a number'} from ${f.min} to ${f.max}.`);
+    S.customOpen[d.key] = false;
+    const ch = await saveSetting(d.key, v);
+    render(); toast(ch ? 'Saved.' : 'No change.');
+  },
+  async resetnow(){
+    if (S.pending !== 'reset') { S.pending = 'reset'; return render(); }
+    S.pending = null;
+    await loadSettings();
+    S.settings.anchor = Date.now();
+    await store.set('settings', S.settings, true);
+    const lg = (await store.get('limitsLog', true)) || [];
+    lg.push({ts:Date.now(), type:'reset'});
+    await store.set('limitsLog', lg, true); S.limitsLog = lg;
+    render(); toast('All strikes and warnings reset.');
+  },
+
+  /* admin: classes and teachers */
+  async createclass(){
+    const name = val('newClass'); if (!name) return toast('Add a class name first.');
+    if (S.classes.some(c => c.name.toLowerCase() === name.toLowerCase())) return toast('That class already exists.');
+    const c = {id:uid(), name, roster:[]};
+    await store.set('class:' + c.id, c, true);
+    await addToIndex('classIndex', c.id);
+    await refreshAll(); render(); toast(`${name} added.`);
+  },
+  async createteacher(){
+    const name = val('newTeacherName'), pin = val('newTeacherPin');
+    if (!name) return toast('Add the teacher\u2019s name first.');
+    if (pin && !validPin(pin)) return toast('A PIN needs 4 to 8 digits.');
+    const t = {id:uid(), name, pin:pin || null, classIds:[]};
+    await store.set('teacher:' + t.id, t, true);
+    await addToIndex('teacherIndex', t.id);
+    await refreshAll(); render(); toast(`${name} added. Now choose their classes.`);
+  },
+  async rename(d){
+    const name = val('rn-' + d.id); if (!name) return toast('The name cannot be empty.');
+    const key = (d.kind === 'class' ? 'class:' : 'teacher:') + d.id;
+    const o = await store.get(key, true); if (!o) return;
+    o.name = name; await store.set(key, o, true);
+    await refreshAll(); render(); toast('Renamed.');
+  },
+  async toggleassign(d){
+    const t = await store.get('teacher:' + d.t, true); if (!t) return;
+    t.classIds = t.classIds.includes(d.c) ? t.classIds.filter(x => x !== d.c) : t.classIds.concat(d.c);
+    await store.set('teacher:' + t.id, t, true);
+    await loadTeachers(); render();
+  },
+  async settpin(d){
+    const pin = val('tp-' + d.id);
+    if (pin && !validPin(pin)) return toast('A PIN needs 4 to 8 digits.');
+    const t = await store.get('teacher:' + d.id, true); if (!t) return;
+    t.pin = pin || null;
+    await store.set('teacher:' + t.id, t, true);
+    await loadTeachers(); render(); toast(pin ? 'PIN saved.' : 'PIN removed.');
+  },
+  async delteacher(d){
+    if (S.pending !== d.id) { S.pending = d.id; return render(); }
+    S.pending = null;
+    const idx = ((await store.get('teacherIndex', true)) || []).filter(id => id !== d.id);
+    await store.set('teacherIndex', idx, true);
+    await store.del('teacher:' + d.id, true);
+    await refreshAll(); render(); toast('Teacher deleted.');
+  },
+  async delclass(d){
+    if (S.pending !== d.id) { S.pending = d.id; return render(); }
+    S.pending = null;
+    const idx = ((await store.get('classIndex', true)) || []).filter(id => id !== d.id);
+    await store.set('classIndex', idx, true);
+    await store.del('class:' + d.id, true); await store.del('log:' + d.id, true);
+    for (const t of S.teachers) {
+      if (t.classIds.includes(d.id)) { const f = await store.get('teacher:' + t.id, true); if (f) { f.classIds = f.classIds.filter(x => x !== d.id); await store.set('teacher:' + t.id, f, true); } }
+    }
+    await refreshAll(); render(); toast('Class deleted.');
+  },
+  async quickstart(){
+    const cs = ['Class A','Class B','Class C'].map(n => ({id:uid(), name:n, roster:[]}));
+    const ts = [['Teacher 1',[0,1]], ['Teacher 2',[0,2]], ['Teacher 3',[1,2]]].map(([n, ix]) => ({id:uid(), name:n, pin:null, classIds:ix.map(i => cs[i].id)}));
+    for (const c of cs) { await store.set('class:' + c.id, c, true); await addToIndex('classIndex', c.id); }
+    for (const t of ts) { await store.set('teacher:' + t.id, t, true); await addToIndex('teacherIndex', t.id); }
+    await refreshAll(); render(); toast('Example classes and teachers loaded.');
+  },
+
+  /* export */
+  async xlsx(){
+    try {
+      await refreshAll();
+      const bytes = buildXlsxBytes();
+      download('hall-pass-report-' + new Date().toISOString().slice(0, 10) + '.xlsx', new Blob([bytes], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+      toast('Excel file created.');
+    } catch (e) { toast('Could not create the Excel file. Try the simple CSV instead.'); }
+  },
+  csv(){ download('hall-pass-' + new Date().toISOString().slice(0, 10) + '.csv', new Blob([csvText()], {type:'text/csv'})); },
+  async copycsv(){
+    try { await navigator.clipboard.writeText(csvText()); toast('CSV copied.'); }
+    catch (e) { toast('Copy was blocked. Use Download CSV instead.'); }
+  }
+};
+
+function fail(err){
+  S.busy = false;
+  console.error(err);
+  if (err && err.message === 'auth') { S.needCode = true; render(); return; }
+  toast('No connection, so nothing was changed. Check your internet and try again.', true);
+  if (S.device && (S.device.role === 'admin' ? S.unlocked : S.me)) (S.device.role === 'admin' ? refreshAll() : refreshMine()).then(() => { if (!typing()) render(); }).catch(() => {});
+}
+const guard = p => Promise.resolve(p).catch(fail);
+$app.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
+  const fn = H[el.dataset.act];
+  if (fn) { try { guard(fn(el.dataset)); } catch (err) { fail(err); } }
+});
+$app.addEventListener('change', e => {
+  const el = e.target.closest('[data-chg]'); if (!el) return;
+  const key = el.dataset.chg;
+  if (el.value === 'custom') { S.customOpen[key] = true; render(); return; }
+  S.customOpen[key] = false;
+  guard((async () => { const ch = await saveSetting(key, Number(el.value)); render(); toast(ch ? 'Saved.' : 'No change.'); })());
+});
+$app.addEventListener('input', e => {
+  if (e.target.id === 'names') { S.draft = e.target.value; return; }
+  const sc = e.target.dataset && e.target.dataset.search; if (!sc) return;
+  S.q[sc] = e.target.value;
+  const box = document.getElementById('results');
+  if (box) { box.innerHTML = resultsHtml(sc); tick(); }
+});
+$app.addEventListener('keydown', e => {
+  const t = e.target;
+  if (e.key === 'Enter') {
+    const map = {pin:'[data-act="unlock"],[data-act="setpin"]', tpin:'[data-act="checktpin"]', code:'[data-act="savecode"]'};
+    if (map[t.id]) { const b = $app.querySelector(map[t.id]); if (b) b.click(); return; }
+  }
+  if ((e.key === 'Enter' || e.key === ' ') && t.getAttribute && t.getAttribute('role') === 'button' && t.dataset && t.dataset.act) { e.preventDefault(); t.click(); }
+});
+
+/* ---------- live timers and refresh ---------- */
+function tick(){
+  const now = Date.now(), lim = S.settings.maxMin * 60000;
+  document.querySelectorAll('[data-out]').forEach(el => {
+    const ms = now - Number(el.dataset.out);
+    el.textContent = fmt(ms);
+    const pass = el.closest('.pass'); if (pass) pass.classList.toggle('over', ms > lim);
+    const mini = el.closest('.mini'); if (mini) mini.classList.toggle('over', ms > lim);
+  });
+}
+setInterval(tick, 1000);
+
+function typing(){ return ['INPUT','TEXTAREA','SELECT'].includes((document.activeElement || {}).tagName); }
+async function softRefresh(){
+  if (!S.device || document.hidden || typing() || S.busy || S.confirm) return;
+  try {
+    if (S.device.role === 'admin' && S.unlocked && !S.editClass && ['live','flagged','reports'].includes(S.tab)) { await refreshAll(); if (!typing()) render(); }
+    else if (S.device.role === 'teacher' && S.me && S.tab !== 'class') { await refreshMine(); if (!typing() && !S.busy && !S.confirm) render(); }
+  } catch (e) { if (e && e.message === 'auth') fail(e); }
+}
+setInterval(softRefresh, 10000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) softRefresh(); });
+
+/* ---------- start ---------- */
+async function start(){
+  $app.innerHTML = '<p class="note">Loading…</p>';
+  try {
+    if (CLOUD) {
+      if (!schoolCode()) { S.needCode = true; return render(); }
+      await cloud('?on_conflict=key', Object.assign({}, UPSERT, {body:JSON.stringify({key:'_ping', value:{ts:Date.now()}})}));
+    }
+    S.device = await store.get('device', false);
+    await Promise.all([loadSettings(), loadClasses(), loadTeachers()]);
+    if (S.device && S.device.role === 'teacher' && S.device.teacherId) {
+      await refreshMine();
+      if (!S.me) { S.device = {role:'teacher'}; await store.set('device', S.device, false); }
+    }
+    if (S.device && S.device.role === 'admin') S.tab = 'live';
+    render();
+  } catch (e) {
+    if (e && e.message === 'auth') { ls.del('hp:code'); S.needCode = true; render(); }
+    else { console.error(e); viewError(); }
+  }
+}
+if (!CLOUD) document.getElementById('demo').hidden = false;
+start();
+})();
+</script>
+</body>
+</html>
